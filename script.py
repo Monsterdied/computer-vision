@@ -51,26 +51,43 @@ def edgeDetection(img2):
     cv2.imshow("Hough Lines", img2_copy)
 
 def gpt_Idea(img):
-    #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #img = cv2.GaussianBlur(img, (13, 13), 0)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #gray = img
     #TODO DIDNT work
-    gray = kmeans(3,img)
     chessboard_size = (7, 7)  # Change this based on your chessboard
 
     # Find chessboard corners
-    ret, corners = cv2.findChessboardCorners(gray, chessboard_size, None)
-    cv2.imshow("Chessboard Corners", gray)
+    ret, corners = cv2.findChessboardCorners(img, chessboard_size, flags =cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_NORMALIZE_IMAGE )
     if ret:
-        # Refine the corner locations for better accuracy
+        # Refine the corner locations
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
 
-        # Draw the corners on the image
+        # Draw and display results
         cv2.drawChessboardCorners(img, chessboard_size, corners, ret)
         cv2.imshow('Chessboard Corners', img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        return corners
     else:
-        print("Chessboard corners not found.")
+        print("Chessboard corners not found. Trying alternative methods...")
+        
+        # Alternative approach if standard method fails
+        # 1. Try edge detection
+        edges = cv2.Canny(img, 50, 150)
+        ret, corners = cv2.findChessboardCorners(edges, chessboard_size, None)
+        cv2.drawChessboardCorners(img, chessboard_size, corners, ret)
+        cv2.imshow('Chessboard Corners', img)
+
+        if not ret:
+            # 2. Try histogram equalization
+            equalized = cv2.equalizeHist(gray)
+            ret, corners = cv2.findChessboardCorners(equalized, chessboard_size, None)
+            cv2.drawChessboardCorners(img, chessboard_size, corners, ret)
+            cv2.imshow('Chessboard Corners', img)
+        
+        return corners if ret else None
 
 if __name__ == "__main__":
     boardTemplate = "assets/board.jpg"
@@ -82,6 +99,8 @@ if __name__ == "__main__":
     cv2.imshow("Board", board)
     #kmeans(3,testImage)
     #edgeDetection(testImage)
-    gpt_Idea(testImage)
+    corners = gpt_Idea(testImage)
+    if corners == None:
+        print("failed")
     cv2.waitKey(0)
     cv2.destroyAllWindows()
