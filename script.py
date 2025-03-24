@@ -99,7 +99,7 @@ if __name__ == "__main__":
     cv2.imshow("Board", board)
     #kmeans(3,testImage)
     #edgeDetection(testImage)
-    corners = gpt_Idea(testImage)
+    corners = gpt_Idea(board)
     if corners == None:
         print("failed")
     cv2.waitKey(0)
