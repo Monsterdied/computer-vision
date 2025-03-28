@@ -51,7 +51,7 @@ def detect_chessboard(imgpath):
     cv2.destroyAllWindows()
 
     return corners
-
+"""
 def detect_chessboard2(imgpath):
     img = cv2.imread(imgpath)
     if img is None:
@@ -91,47 +91,14 @@ def detect_chessboard2(imgpath):
         return corners.reshape(-1, 2)
         
     return None
-
-def warp_chessboard(img, corners):
-    corners =  order_corners(corners,img)
-    #size = 400
-    #target_corners = np.array([[0,0], [size-1,0], [size-1,size-1], [0,size-1]], dtype='float32')
-    #M = cv2.getPerspectiveTransform(corners.astype('float32'), target_corners)
-    #warped = cv2.warpPerspective(img, M, (size, size))
-    #return warped
-
-def order_corners(corners,img):
-
-    first_corner = (int(corners[0][0]), int(corners[0][1]))
-    img = cv2.circle(img, first_corner, 5, (0, 255, 0), -1)
-
-
-    resized_img = cv2.resize(img, (0,0), fx=0.25, fy=0.25)
-    cv2.imshow("w",resized_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    #return np.array(top + bottom)
-
-def process_chessboard_image(img_path):
-    img = cv2.imread(img_path)
-
-    corners = detect_chessboard2(img_path)
-
-
-
-    if corners is None or len(corners) < 4:
-        print("No chessboard found")
-        return None
-
-    warped = warp_chessboard(img, corners)
-
+"""
 dataDir = "images/" 
 count=0
 total=0
 for img in os.listdir(dataDir):
     total+=1
     imgpath = os.path.join(dataDir, img)
-    corners = process_chessboard_image(imgpath)
+    corners = detect_chessboard(imgpath)
     if corners is not None:
         count+=1
         print(f"Chessboard found in {img}")
