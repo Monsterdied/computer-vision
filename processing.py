@@ -19,6 +19,18 @@ def image_processing(imgpath):
     return blurred_img
 
 
+def image_processing2(img):
+
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    clahe_img = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    clahe_img = clahe_img.apply(gray_img)
+
+    gaussian_blurred = cv2.GaussianBlur(clahe_img, (5, 5), 0)
+    
+    return gaussian_blurred
+
+
 def detect_chessboard(imgpath):
 
     #Image for visualization
@@ -75,48 +87,67 @@ def detect_chessboard(imgpath):
     return corners
 
 
-
-def detect_chessboard2(imgpath):
-    img = cv2.imread(imgpath)
-    if img is None:
-        print("Error: Could not read image")
+def wrap_chessboard(imgpath, corners):
+    if corners is None:
+        print("No corners found, skipping wrapping")
         return None
-        
-    # Preprocessing
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (13,13), 0)
     
-    dst = cv2.cornerHarris(gray, 2, 3, 0.04)
-    dst = cv2.dilate(dst, None)
-    ret, dst = cv2.threshold(dst, 0.01*dst.max(), 255, 0)
-    dst = np.uint8(dst)
+    # Load the original image (not resized)
+    img = cv2.imread(imgpath)
     
-    # Find centroids
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-    corners = cv2.goodFeaturesToTrack(gray, 100, 0.01, 10)
+    # Since corners were detected on a resized image, we need to scale them back up
+    scale_factor = 4 
+    corners = corners * scale_factor
     
-    if corners is not None:
-        corners = cv2.cornerSubPix(gray, corners, (5,5), (-1,-1), criteria)
-        
-        # Visualization (resized for display only)
-        vis = img.copy()
-        for corner in corners:
-            x,y = corner.ravel()
-            cv2.circle(vis, (int(x),int(y)), 10, (0,0,255), -1)
-        
-        # Resize just for display
-        display_scale = 0.25  # Adjust as needed
-        resized_vis = cv2.resize(vis, (0,0), fx=display_scale, fy=display_scale)
-        cv2.imshow('Harris Corners', resized_vis)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        
-        # Return corners at original scale
-        return corners.reshape(-1, 2)
-        
+    # Order the corners: top-left, top-right, bottom-right, bottom-left
+    # First, sort by y-coordinate to separate top and bottom rows
+    corners = corners[corners[:, 1].argsort()]
+    # Then sort top and bottom rows by x-coordinate
+    top_row = corners[:2][corners[:2, 0].argsort()]
+    bottom_row = corners[2:][corners[2:, 0].argsort()]
+    ordered_corners = np.array([top_row[0], top_row[1], bottom_row[1], bottom_row[0]], dtype=np.float32)
+    
+    # Calculate the width and height of the chessboard
+    width = max(
+        np.linalg.norm(ordered_corners[0] - ordered_corners[1]),
+        np.linalg.norm(ordered_corners[2] - ordered_corners[3])
+    )
+    height = max(
+        np.linalg.norm(ordered_corners[0] - ordered_corners[3]),
+        np.linalg.norm(ordered_corners[1] - ordered_corners[2])
+    )
+    
+    # Create destination points for the perspective transform
+    dst = np.array([
+        [0, 0],
+        [width - 1, 0],
+        [width - 1, height - 1],
+        [0, height - 1]
+    ], dtype=np.float32)
+    
+    # Get the perspective transform matrix
+    M = cv2.getPerspectiveTransform(ordered_corners, dst)
+    
+    # Warp the image
+    warped = cv2.warpPerspective(img, M, (int(width), int(height)))
+
+    warped_resized = cv2.resize(warped, (0,0), fx=0.25, fy=0.25)
+    
+    # Display the result
+    cv2.imshow("Warped Chessboard", warped_resized)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    return warped
+
+
+def detect_chessboard_squares(img):
+
+    processed_img = image_processing2(img)
+
+    canny_edges = cv2.Canny(processed_img, 50, 150, apertureSize=3)
+
     return None
-
-
 
 dataDir = "images/" 
 count=0
@@ -130,6 +161,12 @@ for img in os.listdir(dataDir):
         print(f"Chessboard found in {img}")
     else:
         print(f"No chessboard found in {img}")
+
+    if corners is not None:
+        wrap = wrap_chessboard(imgpath, corners)
+    
+    if wrap is not None:
+        detect_chessboard_squares(wrap)
 
 print(f"Chessboard found in {count} out of {total} images")
 
