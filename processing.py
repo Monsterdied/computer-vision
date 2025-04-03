@@ -16,7 +16,10 @@ def image_processing(imgpath):
 
     blurred_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
 
-    return blurred_img
+    ret, th_otsu_blur = cv2.threshold(blurred_img,200, 255, cv2.THRESH_BINARY)
+    masked_image = cv2.bitwise_and(blurred_img, blurred_img, mask=th_otsu_blur)
+    #th_otsu_blur = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    return masked_image
 
 
 def detect_chessboard(imgpath):
@@ -130,6 +133,7 @@ for img in os.listdir(dataDir):
         print(f"Chessboard found in {img}")
     else:
         print(f"No chessboard found in {img}")
+    break
 
 print(f"Chessboard found in {count} out of {total} images")
 
