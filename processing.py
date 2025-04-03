@@ -192,7 +192,8 @@ def detect_chessboard_squares(img):
     num_votes = 580
     lines = cv2.HoughLines(canny_edges, 1, np.pi / 180, num_votes,0,0)
     #lines = cv2.HoughLinesP(canny_edges, 1, np.pi / 180, threshold=num_votes, minLineLength=10, maxLineGap=1000)
-    test = cv2.cvtColor(canny_edges, cv2.COLOR_GRAY2BGR)
+    new_img_lines = np.zeros(canny_edges.shape, dtype=np.uint8)
+    test = cv2.cvtColor(new_img_lines, cv2.COLOR_GRAY2BGR)
     draw_lines(lines, test)
 
     return canny_edges
