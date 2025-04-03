@@ -5,9 +5,10 @@ from scipy import ndimage
 import math
 from matplotlib import pyplot as plt
 
-def detect_chessboard(imgpath):
-    
-    img = cv2.imread(imgpath)
+
+def image_processing(imgpath):
+
+    img =  cv2.imread(imgpath)
 
     resized_img = cv2.resize(img, (0,0), fx=0.25, fy=0.25)
 
@@ -15,13 +16,30 @@ def detect_chessboard(imgpath):
 
     blurred_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
 
-    edges = cv2.Canny(blurred_img, 50, 150, apertureSize=3)
+    return blurred_img
+
+
+def detect_chessboard(imgpath):
+
+    #Image for visualization
+    visualize = cv2.imread(imgpath)
+    
+    #Resize for visualization
+    resized_img = cv2.resize(visualize, (0,0), fx=0.25, fy=0.25)
+
+    #Preprocessing of the image
+    img = image_processing(imgpath)
+
+    #Canny edge detection
+    edges = cv2.Canny(img, 50, 150, apertureSize=3)
 
     edges = cv2.dilate(edges, None, iterations=3)
     edges = cv2.erode(edges, None, iterations=3)
 
+    # Find contours in the image
     contours , _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+    # Sort contours by area and filter out small ones
     largest_area = 0
     chessboard_contour = None
     for contour in contours:
@@ -46,12 +64,18 @@ def detect_chessboard(imgpath):
     # Draw the contour
     cv2.polylines(resized_img, [chessboard_contour], True, (255, 0, 0), 2)
 
+    # Display the original image, edges, and detected corners
+    cv2.imshow("Processed Image", img)
+    cv2.imshow("Edges", edges)
     cv2.imshow("Detected Corners", resized_img)
+
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
     return corners
-"""
+
+
+
 def detect_chessboard2(imgpath):
     img = cv2.imread(imgpath)
     if img is None:
@@ -91,7 +115,9 @@ def detect_chessboard2(imgpath):
         return corners.reshape(-1, 2)
         
     return None
-"""
+
+
+
 dataDir = "images/" 
 count=0
 total=0
