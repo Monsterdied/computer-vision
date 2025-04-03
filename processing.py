@@ -139,36 +139,59 @@ def wrap_chessboard(imgpath, corners):
     
     return warped
 
-def draw_lines(lines, img2):
+def draw_lines(lines, line_image):
     if lines is not None:
-        for i in range(0, len(lines)):
-            rho = lines[i][0][0]
-            theta = lines[i][0][1]
-            a = math.cos(theta)
-            b = math.sin(theta)
+        for line in lines:
+            # dont draw diagonal lines
+            rho, theta = line[0]
+            # Convert theta to degrees for easier understanding
+            theta_deg = np.degrees(theta)
+            
+            # Define margin for horizontal/vertical acceptance (in degrees)
+            margin = 10  # degrees of tolerance
+            
+            # Check if line is approximately horizontal (0° or 180° ± margin)
+            is_horizontal = (abs(theta_deg) < margin) or (abs(theta_deg - 180) < margin)
+            
+            # Check if line is approximately vertical (90° or 270° ± margin)
+            is_vertical = (abs(theta_deg - 90) < margin) or (abs(theta_deg - 270) < margin)
+            
+            # Skip if neither horizontal nor vertical within margin
+            if not (is_horizontal or is_vertical):
+                continue
+            a = np.cos(theta)
+            b = np.sin(theta)
             x0 = a * rho
             y0 = b * rho
-            pt1 = (int(x0 + 2000*(-b)), int(y0 + 2000*(a)))
-            pt2 = (int(x0 - 2000*(-b)), int(y0 - 2000*(a)))
-            # Draw the line
-            cv2.line(img2, pt1, pt2, (255,0,0), 3)
+            x1 = int(x0 + 1000 * (-b))
+            y1 = int(y0 + 1000 * (a))
+            x2 = int(x0 - 1000 * (-b))
+            y2 = int(y0 - 1000 * (a))
+            cv2.line(line_image, (x1, y1), (x2, y2), 255, 2)
     #img2 = cv2.resize(img2, (0,0), fx=0.25, fy=0.25)
-    cv2.imshow("Hough Lines", img2)
+    cv2.imshow("Hough Lines", line_image)
     cv2.waitKey(0)
 
 def detect_chessboard_squares(img):
     cv2.imshow("Original Image1", img)
     processed_img = image_processing2(img)
+    x,y = processed_img.shape
+    fx = (1000/x)
+    fy = (1000/y)
+    print(fx,fy)
+    processed_img = cv2.resize(processed_img, (0,0), fx=fy, fy=fx)
     cv2.imshow("Processed Image1", processed_img)
     canny_edges = cv2.Canny(processed_img, 50, 150, apertureSize=3)
-    canny_edges = cv2.dilate(canny_edges, None, iterations=3)
-    #canny_edges = cv2.erode(canny_edges, None, iterations=3)
-    canny_edges = cv2.resize(canny_edges, (0,0), fx=0.5, fy=0.5)
+    canny_edges = cv2.dilate(canny_edges, None, iterations=4)
+    canny_edges = cv2.erode(canny_edges, None, iterations=3)
+    print(x,y)
+    print(canny_edges.shape)
     cv2.imshow("Canny", canny_edges)
     cv2.waitKey(0)
     #rezize for visualization remove after debug
-    num_votes = 700
-    lines = cv2.HoughLines(canny_edges, 1, np.pi / 180, num_votes, 0,0)
+    num_votes = 580
+    lines = cv2.HoughLines(canny_edges, 1, np.pi / 180, num_votes,0,0)
+    #lines = cv2.HoughLinesP(canny_edges, 1, np.pi / 180, threshold=num_votes, minLineLength=10, maxLineGap=1000)
     test = cv2.cvtColor(canny_edges, cv2.COLOR_GRAY2BGR)
     draw_lines(lines, test)
 
