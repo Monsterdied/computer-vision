@@ -15,11 +15,7 @@ def image_processing(imgpath):
     gray_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
 
     blurred_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
-
-    ret, th_otsu_blur = cv2.threshold(blurred_img,200, 255, cv2.THRESH_BINARY)
-    masked_image = cv2.bitwise_and(blurred_img, blurred_img, mask=th_otsu_blur)
-    #th_otsu_blur = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-    return masked_image
+    return blurred_img
 
 
 def image_processing2(img):
@@ -143,14 +139,40 @@ def wrap_chessboard(imgpath, corners):
     
     return warped
 
+def draw_lines(lines, img2):
+    if lines is not None:
+        for i in range(0, len(lines)):
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            a = math.cos(theta)
+            b = math.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            pt1 = (int(x0 + 2000*(-b)), int(y0 + 2000*(a)))
+            pt2 = (int(x0 - 2000*(-b)), int(y0 - 2000*(a)))
+            # Draw the line
+            cv2.line(img2, pt1, pt2, (255,0,0), 3)
+    #img2 = cv2.resize(img2, (0,0), fx=0.25, fy=0.25)
+    cv2.imshow("Hough Lines", img2)
+    cv2.waitKey(0)
 
 def detect_chessboard_squares(img):
-
+    cv2.imshow("Original Image1", img)
     processed_img = image_processing2(img)
-
+    cv2.imshow("Processed Image1", processed_img)
     canny_edges = cv2.Canny(processed_img, 50, 150, apertureSize=3)
+    canny_edges = cv2.dilate(canny_edges, None, iterations=3)
+    #canny_edges = cv2.erode(canny_edges, None, iterations=3)
+    canny_edges = cv2.resize(canny_edges, (0,0), fx=0.5, fy=0.5)
+    cv2.imshow("Canny", canny_edges)
+    cv2.waitKey(0)
+    #rezize for visualization remove after debug
+    num_votes = 700
+    lines = cv2.HoughLines(canny_edges, 1, np.pi / 180, num_votes, 0,0)
+    test = cv2.cvtColor(canny_edges, cv2.COLOR_GRAY2BGR)
+    draw_lines(lines, test)
 
-    return None
+    return canny_edges
 
 dataDir = "images/" 
 count=0
@@ -164,13 +186,16 @@ for img in os.listdir(dataDir):
         print(f"Chessboard found in {img}")
     else:
         print(f"No chessboard found in {img}")
-    break
 
     if corners is not None:
         wrap = wrap_chessboard(imgpath, corners)
     
     if wrap is not None:
-        detect_chessboard_squares(wrap)
+        canny = detect_chessboard_squares(wrap)
+
+    if canny is None:
+        print("No wrapping performed")
+    break
 
 print(f"Chessboard found in {count} out of {total} images")
 
