@@ -171,6 +171,7 @@ def draw_lines(lines, line_image):
     #img2 = cv2.resize(img2, (0,0), fx=0.25, fy=0.25)
     cv2.imshow("Hough Lines", line_image)
     cv2.waitKey(0)
+    return line_image
 
 def detect_chessboard_squares(img):
     cv2.imshow("Original Image1", img)
@@ -182,21 +183,43 @@ def detect_chessboard_squares(img):
     processed_img = cv2.resize(processed_img, (0,0), fx=fy, fy=fx)
     cv2.imshow("Processed Image1", processed_img)
     canny_edges = cv2.Canny(processed_img, 50, 150, apertureSize=3)
-    canny_edges = cv2.dilate(canny_edges, None, iterations=4)
-    canny_edges = cv2.erode(canny_edges, None, iterations=3)
+    canny_edges = cv2.dilate(canny_edges, None, iterations=3)
+    canny_edges = cv2.erode(canny_edges, None, iterations=1)
     print(x,y)
     print(canny_edges.shape)
     cv2.imshow("Canny", canny_edges)
     cv2.waitKey(0)
     #rezize for visualization remove after debug
-    num_votes = 580
+    num_votes = 680
     lines = cv2.HoughLines(canny_edges, 1, np.pi / 180, num_votes,0,0)
     #lines = cv2.HoughLinesP(canny_edges, 1, np.pi / 180, threshold=num_votes, minLineLength=10, maxLineGap=1000)
     new_img_lines = np.zeros(canny_edges.shape, dtype=np.uint8)
-    test = cv2.cvtColor(new_img_lines, cv2.COLOR_GRAY2BGR)
-    draw_lines(lines, test)
+    image_with_lines = draw_lines(lines, new_img_lines)
+    squares(image_with_lines,processed_img)
+
 
     return canny_edges
+def squares(img,original_img):
+        # Find contours in the image
+    contours , _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Sort contours by area and filter out small ones
+    squares = []
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if 4000 < area < 20000:
+            peri = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+            if len(approx) == 4:
+                squares.append(approx)
+    #convert to color image for visualization
+    original_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
+    for square in squares:
+        cv2.drawContours(original_img, [square], 0, (0, 0, 255), 2)
+    cv2.imshow("Squares drawn", original_img)
+    cv2.waitKey(0)
+
+    return corners
 
 dataDir = "images/" 
 count=0
