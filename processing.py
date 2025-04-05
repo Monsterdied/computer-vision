@@ -4,6 +4,7 @@ import os
 from scipy import ndimage
 import math
 from matplotlib import pyplot as plt
+import random
 
 
 def image_processing(imgpath):
@@ -197,8 +198,8 @@ def detect_chessboard_squares(img):
         #lines = cv2.HoughLinesP(canny_edges, 1, np.pi / 180, threshold=num_votes, minLineLength=10, maxLineGap=1000)
         new_img_lines = np.zeros(canny_edges.shape, dtype=np.uint8)
         image_with_lines = draw_lines(lines, new_img_lines)
-        matrix = squares(image_with_lines,processed_img)
-        squares_number = len(matrix)
+        squares_raw,matrix = squares(image_with_lines,processed_img)
+        squares_number = len(squares_raw)
         print(f"Squares found: {squares_number}")
         if squares_number > best_squares_number:
             best_squares_number = squares_number
@@ -212,7 +213,10 @@ def detect_chessboard_squares(img):
     
 
 
-    return canny_edges
+    return best_squares,canny_edges
+
+
+#gets the squares from the image
 def squares(img,original_img):
         # Find contours in the image
     contours , _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -230,7 +234,10 @@ def squares(img,original_img):
     original_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
     square_matrix = orderSquares(squares)
     drawSquares(square_matrix, original_img)
-    return squares
+    return squares,square_matrix
+
+
+#draws the squares on the image
 def drawSquares(square_matrix, img):
     for row in square_matrix:
         #counter = 0
@@ -247,6 +254,8 @@ def drawSquares(square_matrix, img):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+
+#Order squares based on their coordinates and converts them to a matrix
 def orderSquares(squares):
     # Sort squares based on their coordinates
         # Calculate the center of each square for sorting
@@ -263,7 +272,6 @@ def orderSquares(squares):
         return []
     sorted_squares_by_y = sorted(squares_with_centers, key=lambda x: (x[0]))
     current_y = None
-    y_index = 0
     # TODO FINETUNE THIS TO GET LEVELS
     margin_y = 40
     smallest_x = sorted(squares_with_centers,key=lambda x: (x[1]))[0][1]
@@ -296,6 +304,51 @@ def orderSquares(squares):
 
         
     return matrix
+def check_square(square,img):
+    cv2.imshow("Canny Edges", img)
+    x, y, w, h = cv2.boundingRect(square)
+    roi = img[y:y+h, x:x+w]
+
+    mask = np.zeros((h, w), dtype=np.uint8)
+    adjusted_contour = square - [x, y]  # Adjust contour coordinates
+    cv2.drawContours(mask, [adjusted_contour], -1, 255, thickness=cv2.FILLED)
+
+    # 4. Apply the mask to the cropped region
+    masked_roi = cv2.bitwise_and(roi, roi, mask=mask)
+    
+    # 5. Resize to desired output size (100x100)
+    resized = cv2.resize(masked_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
+
+    total_pixels = resized.size
+    black_pixels = np.count_nonzero(resized == 0)
+    
+    # Calculate percentage
+    percentage = (black_pixels / total_pixels) * 100.0
+    print(f"Percentage of black pixels: {percentage:.2f}%")
+    cv2.imshow("Masked Image", resized)
+    cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    if percentage > 20:
+        print("Black square detected")
+        return 0
+    else:
+        print("White square detected")
+        return 1
+
+def check_pieces(square_matrix,cannyEdges):
+    cannyEdges = cv2.dilate(cannyEdges, None, iterations=15)
+    cannyEdges = cv2.erode(cannyEdges, None, iterations=10)
+    result = []
+    for row in square_matrix:
+        new_row = []
+        for square in row:
+            if square is None:
+                #I dont know just try our luck
+                new_row.append(random.randint(0,1))
+                continue
+            check_square(square,cannyEdges)
+        result.append(new_row)
+
 
 dataDir = "images/" 
 count=0
@@ -315,10 +368,12 @@ for img in os.listdir(dataDir):
         wrap = wrap_chessboard(imgpath, corners)
     
     if wrap is not None:
-        canny = detect_chessboard_squares(wrap)
+        square_box,cannyEdges = detect_chessboard_squares(wrap)
 
-    if canny is None:
+    if square_box is None:
         print("No wrapping performed")
+    if square_box is not None:
+        matrix = check_pieces(square_box,cannyEdges)
     #break
 
 print(f"Chessboard found in {count} out of {total} images")
