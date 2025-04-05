@@ -214,12 +214,65 @@ def squares(img,original_img):
                 squares.append(approx)
     #convert to color image for visualization
     original_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
-    for square in squares:
-        cv2.drawContours(original_img, [square], 0, (0, 0, 255), 2)
-    cv2.imshow("Squares drawn", original_img)
+    square_matrix = orderSquares(squares)
+    drawSquares(square_matrix, original_img)
+    return corners
+def drawSquares(square_matrix, img):
+    for row in square_matrix:
+        counter = 0
+        for square in row:
+            cv2.drawContours(img, [square], 0, (0, 0, 255), 2)
+            print(square[0][0][0] -square[2][0][0])
+            print(square[1][0][0] -square[3][0][0])
+            counter += 1
+            if counter > 6:
+                break
+    cv2.imshow("Squares drawn", img)
     cv2.waitKey(0)
 
-    return corners
+def orderSquares(squares):
+    # Sort squares based on their coordinates
+        # Calculate the center of each square for sorting
+    squares_with_centers = []
+    for square in squares:
+        # Calculate centroid (average of all points)
+        x_coords = [point[0][0] for point in square]
+        y_coords = [point[0][1] for point in square]
+        center_x = sum(x_coords) / 4
+        center_y = sum(y_coords) / 4
+        squares_with_centers.append((center_y, center_x, square))
+    sorted_squares_by_y = sorted(squares_with_centers, key=lambda x: (x[0]))
+    current_y = None
+    y_index = 0
+    # TODO FINETUNE THIS TO GET LEVELS
+    margin_y = 40
+    smallest_x = sorted(squares_with_centers,key=lambda x: (x[1]))[0][1]
+    #IMPORTANT
+    #each square has 100 by 100 pixels
+    matrix = []
+    currentLevel = []
+    for y,x,square in sorted_squares_by_y:
+        if current_y is None:
+            current_y = y
+            currentLevel = [None] * 8
+        elif abs(current_y - y) > margin_y:
+            current_y = y
+            matrix.append(currentLevel)
+            currentLevel = [None] * 8
+        x_level = round((x-smallest_x) // 100)
+
+        currentLevel[x_level] = square
+    
+    matrix.append(currentLevel)
+    # Old Approach
+    #sort by x and y with the margin applied to the y axis
+    #sorted_squares_by_y_x = sorted(matrix, key=lambda x: (x[0],x[1]))
+    #print(sorted_squares_by_y_x)
+    #sorted_squares = map(lambda x: x[2],sorted_squares_by_y_x)
+
+
+        
+    return matrix
 
 dataDir = "images/" 
 count=0
