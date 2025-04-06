@@ -346,7 +346,7 @@ def check_pieces(square_matrix,cannyEdges):
                 #I dont know just try our luck
                 new_row.append(random.randint(0,1))
                 continue
-            check_square(square,cannyEdges)
+            new_row.append(check_square(square,cannyEdges))
         result.append(new_row)
 
 
