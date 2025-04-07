@@ -164,10 +164,10 @@ def draw_lines(lines, line_image,debug=False):
             b = np.sin(theta)
             x0 = a * rho
             y0 = b * rho
-            x1 = int(x0 + 1000 * (-b))
-            y1 = int(y0 + 1000 * (a))
-            x2 = int(x0 - 1000 * (-b))
-            y2 = int(y0 - 1000 * (a))
+            x1 = int(x0 + 1200 * (-b))
+            y1 = int(y0 + 1200 * (a))
+            x2 = int(x0 - 1200 * (-b))
+            y2 = int(y0 - 1200 * (a))
             cv2.line(line_image, (x1, y1), (x2, y2), 255, 2)
     #img2 = cv2.resize(img2, (0,0), fx=0.25, fy=0.25)
     if debug == True:
@@ -199,6 +199,7 @@ def detect_chessboard_squares(img):
     num_votes = 850
     best_squares_number = 0
     best_squares = None
+    best_img_lines = None
     #try 3 times to find the best number of votes
     for i in range(7):
         lines = cv2.HoughLines(canny_edges, 1, np.pi / 180, num_votes,0,0)
@@ -211,16 +212,19 @@ def detect_chessboard_squares(img):
         if squares_number > best_squares_number:
             best_squares_number = squares_number
             best_squares = matrix
+            best_img_lines = image_with_lines
         if squares_number == 64:
             break
         else:
             num_votes -= 50
             #print(num_votes)
             #print("Not enough squares found")
-    print(f"Best number of squares found: {best_squares}")
-    img_with_lines = cv2.cvtColor(image_with_lines, cv2.COLOR_GRAY2BGR)
     if best_squares is not None:
-        drawSquares(best_squares, img_with_lines)
+        if best_squares_number == 64:
+            print("All squares found")
+        else:
+            best_img_lines = cv2.cvtColor(best_img_lines, cv2.COLOR_GRAY2BGR)
+            drawSquares(best_squares, best_img_lines)
     
 
 
@@ -239,10 +243,10 @@ def squares(img,original_img,debug=False):
         x,y,w,h = cv2.boundingRect(contour)
 
         aspect_ratio = float(w)/h
-        if aspect_ratio < 0.7 or aspect_ratio > 1.4:
+        if aspect_ratio < 0.5 or aspect_ratio > 1.5:
             continue
         area = cv2.contourArea(contour)
-        if 5500 < area and area< 11000:
+        if 4800 < area and area< 11000:
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
             if len(approx) == 4:
@@ -258,17 +262,17 @@ def squares(img,original_img,debug=False):
 #draws the squares on the image
 def drawSquares(square_matrix, img):
     for row in square_matrix:
-        #counter = 0
+        counter = 0
         for square in row:
             if square is None:
+                #print("Square is None")
                 continue
-            print(square[0][0][0],square[0][0][1])
+            counter += 1
+            #if counter < 8:
+            #    continue
             cv2.drawContours(img, [square], 0, (0, 255, 255), 2)
             #print(square[0][0][0] -square[2][0][0])
             #print(square[1][0][0] -square[3][0][0])
-            #counter += 1
-            #if counter > 1:
-            #    break
     cv2.imshow("Squares drawn", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -298,20 +302,34 @@ def orderSquares(squares):
     #each square has 100 by 100 pixels
     matrix = []
     currentLevel = []
+    coeficient = 100
+    index = 0
     for y,x,square in sorted_squares_by_y:
         if current_y is None:
             current_y = y
             currentLevel = [None] * 8
         elif abs(current_y - y) > margin_y:
             current_y = y
+            coeficient = 100
+            index = 0
             matrix.append(currentLevel)
             currentLevel = [None] * 8
-        x_level = round((x-smallest_x) // 100)
+        # overthinking this part
+        """x_level = round((x-smallest_x) // coeficient)
         if x_level > 7:
             print("X level out of bounds")
             continue
 
-        currentLevel[x_level] = square
+        if currentLevel[x_level] is not None:
+            for i in range(8):
+                if currentLevel[i] is None:
+                    currentLevel[i] = square
+                    break
+                coeficient = coeficient - 5"""
+        if index > 7:
+            continue
+        currentLevel[index] = square
+        index += 1
     
     matrix.append(currentLevel)
     # Old Approach
@@ -323,6 +341,9 @@ def orderSquares(squares):
 
         
     return matrix
+
+
+#check if the square is black or white
 def check_square(square,img):
     #cv2.imshow("Canny Edges", img)
     x, y, w, h = cv2.boundingRect(square)
@@ -353,7 +374,10 @@ def check_square(square,img):
     else:
         #print("White square detected")
         return 1
+    
 
+
+#check the pressence of pieces in the squares
 def check_pieces(square_matrix,cannyEdges):
     cannyEdges = cv2.dilate(cannyEdges, None, iterations=15)
     cannyEdges = cv2.erode(cannyEdges, None, iterations=10)
@@ -367,11 +391,17 @@ def check_pieces(square_matrix,cannyEdges):
                 continue
             new_row.append(check_square(square,cannyEdges))
         result.append(new_row)
+
+
+# draw the bounding boxes of the pieces
 def draw_bounding_boxes(img, bounding_boxes):
     for (x, y, w, h) in bounding_boxes:
         cv2.rectangle(img, (x, y), (x + w, y + h), (255,0,0), 2)
     return img
-def get_pieces_bounding_boxes(normalizedBoard):
+
+
+#get the bounding boxes of the pieces
+def get_pieces_bounding_boxes(normalizedBoard,debug=False):
     #canny
     # Apply adaptive thresholding before Canny
     blurred = cv2.GaussianBlur(normalizedBoard, (5,5), 0)
@@ -411,8 +441,9 @@ def get_pieces_bounding_boxes(normalizedBoard):
         bounding_boxes.append((x, y, w, h))
     normalizedBoard1 = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
     img_with_boxes = draw_bounding_boxes(normalizedBoard1, bounding_boxes)
-    cv2.imshow("Bounding Boxes", img_with_boxes)
-    cv2.waitKey(0)
+    if debug:
+        cv2.imshow("Bounding Boxes", img_with_boxes)
+        cv2.waitKey(0)
     # Draw bounding boxes on the original image
     return bounding_boxes
 
@@ -421,7 +452,7 @@ dataDir = "images/"
 count=0
 total=0
 for img in os.listdir(dataDir):
-    #img = "G083_IMG089.jpg"
+    #img = "G019_IMG082.jpg"
     total+=1
     imgpath = os.path.join(dataDir, img)
     corners = detect_chessboard(imgpath)
@@ -449,11 +480,12 @@ for img in os.listdir(dataDir):
         #convert to color image for visualization
         normalizedBoard1 = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
         img_with_boxes = draw_bounding_boxes(normalizedBoard1, bounding_boxes)
-        cv2.imshow("Bounding Boxes", img_with_boxes)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.imshow("Bounding Boxes", img_with_boxes)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
     else:
         print("No canny edges found")
+    #break
 
 print(f"Chessboard found in {count} out of {total} images")
 
