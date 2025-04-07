@@ -222,9 +222,9 @@ def detect_chessboard_squares(img):
     if best_squares is not None:
         if best_squares_number == 64:
             print("All squares found")
-        else:
-            best_img_lines = cv2.cvtColor(best_img_lines, cv2.COLOR_GRAY2BGR)
-            drawSquares(best_squares, best_img_lines)
+        #else:
+        best_img_lines = cv2.cvtColor(best_img_lines, cv2.COLOR_GRAY2BGR)
+        drawSquares(best_squares, best_img_lines)
     
 
 
@@ -243,10 +243,10 @@ def squares(img,original_img,debug=False):
         x,y,w,h = cv2.boundingRect(contour)
 
         aspect_ratio = float(w)/h
-        if aspect_ratio < 0.5 or aspect_ratio > 1.5:
-            continue
+        #if aspect_ratio < 0.5 or aspect_ratio > 1.5:
+        #    continue
         area = cv2.contourArea(contour)
-        if 4800 < area and area< 11000:
+        if 4000 < area and area< 11000:
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
             if len(approx) == 4:
@@ -261,16 +261,46 @@ def squares(img,original_img,debug=False):
 
 #draws the squares on the image
 def drawSquares(square_matrix, img):
+    row_idx = -1
     for row in square_matrix:
         counter = 0
+        row_idx += 1
+        column_idx = -1
         for square in row:
+            column_idx += 1
             if square is None:
                 #print("Square is None")
                 continue
             counter += 1
             #if counter < 8:
             #    continue
-            cv2.drawContours(img, [square], 0, (0, 255, 255), 2)
+            #print(square)
+            cv2.drawContours(img, [square], 0, (0, 0, 255), 2)
+            moments = cv2.moments(square[2])
+            if moments["m00"] != 0:
+                cx = int(moments["m10"] / moments["m00"])
+                cy = int(moments["m01"] / moments["m00"])
+            else:
+                # Fallback: Use mean of all points if moments fail
+                cx = int(np.mean(square[:, 0, 0]))
+                cy = int(np.mean(square[:, 0, 1]))
+            
+            # Display row and column numbers (e.g., "R0,C1")
+            text = f"R{row_idx},C{column_idx}"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            thickness = 1
+            text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+            
+            # Adjust text position to center it properly
+            text_x = cx - text_size[0] // 2
+            text_y = cy + text_size[1] // 2
+            
+            # Draw the text (white color)
+            cv2.putText(
+                img, text, (text_x, text_y), 
+                font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA
+            )
             #print(square[0][0][0] -square[2][0][0])
             #print(square[1][0][0] -square[3][0][0])
     cv2.imshow("Squares drawn", img)
@@ -296,51 +326,57 @@ def orderSquares(squares):
     sorted_squares_by_y = sorted(squares_with_centers, key=lambda x: (x[0]))
     current_y = None
     # TODO FINETUNE THIS TO GET LEVELS
-    margin_y = 40
-    smallest_x = sorted(squares_with_centers,key=lambda x: (x[1]))[0][1]
+    margin_y = 20
+    margin_x = 600
     #IMPORTANT
     #each square has 100 by 100 pixels
     matrix = []
     currentLevel = []
-    coeficient = 100
-    index = 0
     for y,x,square in sorted_squares_by_y:
         if current_y is None:
             current_y = y
-            currentLevel = [None] * 8
-        elif abs(current_y - y) > margin_y:
-            current_y = y
-            coeficient = 100
-            index = 0
+            current_x = x
+        elif abs(current_y - y) > margin_y or (len(currentLevel) >=8 and abs(current_x - x) > margin_x):
+            currentLevel = HandleColumn(currentLevel)
             matrix.append(currentLevel)
-            currentLevel = [None] * 8
-        # overthinking this part
-        """x_level = round((x-smallest_x) // coeficient)
-        if x_level > 7:
-            print("X level out of bounds")
-            continue
+            currentLevel = []
 
-        if currentLevel[x_level] is not None:
-            for i in range(8):
-                if currentLevel[i] is None:
-                    currentLevel[i] = square
-                    break
-                coeficient = coeficient - 5"""
-        if index > 7:
-            continue
-        currentLevel[index] = square
-        index += 1
-    
+        currentLevel.append((y,x,square))
+        current_x = x
+        current_y = y
+    currentLevel = HandleColumn(currentLevel)
     matrix.append(currentLevel)
-    # Old Approach
-    #sort by x and y with the margin applied to the y axis
-    #sorted_squares_by_y_x = sorted(matrix, key=lambda x: (x[0],x[1]))
-    #print(sorted_squares_by_y_x)
-    #sorted_squares = map(lambda x: x[2],sorted_squares_by_y_x)
-
-
-        
     return matrix
+
+# check if column is valid
+def HandleColumn(currentLevel):
+    currentLevel.sort(key=lambda x: x[1])
+    if len(currentLevel) < 8:
+        print("Not enough squares in a row")
+        currentLevel = dealWithMissingSquares(currentLevel)
+    if len(currentLevel) > 8:
+        print("Too many squares in a row")
+    currentLevel =map(lambda x: x[2],currentLevel)
+    return currentLevel
+
+# Deal when a column has missing squares find the NONE squares and add them
+def dealWithMissingSquares(currentLevel):
+    # TODO probably expand to use the two nearest squares to speculate the middle square
+    previousSquare = None
+    result = []
+    for currentEntry in currentLevel:
+        if previousSquare is None:
+            result.append(currentEntry)
+            previousSquare = currentEntry
+            continue
+        if abs(currentEntry[1] - previousSquare[1]) > 120:
+            #add the missing square to the list
+            result.append((currentEntry[0],previousSquare[1],None))
+        result.append(currentEntry)
+        previousSquare = currentEntry
+    return result
+
+
 
 
 #check if the square is black or white
@@ -387,7 +423,8 @@ def check_pieces(square_matrix,cannyEdges):
         for square in row:
             if square is None:
                 #I dont know just try our luck
-                new_row.append(random.randint(0,1))
+                #if it didnt detect a square probably there is a piece there
+                new_row.append(1)
                 continue
             new_row.append(check_square(square,cannyEdges))
         result.append(new_row)
@@ -452,7 +489,7 @@ dataDir = "images/"
 count=0
 total=0
 for img in os.listdir(dataDir):
-    #img = "G019_IMG082.jpg"
+    #img = "G087_IMG099.jpg"
     total+=1
     imgpath = os.path.join(dataDir, img)
     corners = detect_chessboard(imgpath)
