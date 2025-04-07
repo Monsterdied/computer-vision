@@ -303,6 +303,7 @@ def drawSquares(square_matrix, img):
             )
             #print(square[0][0][0] -square[2][0][0])
             #print(square[1][0][0] -square[3][0][0])
+    img = cv2.resize(img, (0,0), fx=0.7, fy=0.7)
     cv2.imshow("Squares drawn", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -352,10 +353,11 @@ def orderSquares(squares):
 def HandleColumn(currentLevel):
     currentLevel.sort(key=lambda x: x[1])
     if len(currentLevel) < 8:
-        print("Not enough squares in a row")
+        print(currentLevel)
+        #print("Not enough squares in a row:",len(currentLevel))
         currentLevel = dealWithMissingSquares(currentLevel)
     if len(currentLevel) > 8:
-        print("Too many squares in a row")
+        print("Too many squares in a row:",len(currentLevel))
     currentLevel =map(lambda x: x[2],currentLevel)
     return currentLevel
 
@@ -364,16 +366,31 @@ def dealWithMissingSquares(currentLevel):
     # TODO probably expand to use the two nearest squares to speculate the middle square
     previousSquare = None
     result = []
-    for currentEntry in currentLevel:
-        if previousSquare is None:
-            result.append(currentEntry)
-            previousSquare = currentEntry
-            continue
-        if abs(currentEntry[1] - previousSquare[1]) > 120:
+    if len(currentLevel) == 0:
+        return [None]*8
+    if len(currentLevel) < 2:
+        rest = (-1,-1,[None])*(8-len(currentLevel))
+        currentLevel.extend(rest)
+        return currentLevel
+    previousSquare = currentLevel.pop(0)
+    result.append(previousSquare)
+    currentEntry = currentLevel.pop(0)
+    previousX = currentEntry[1]
+    while len(result) <8:
+        if abs(currentEntry[1] - previousX) > 120:
+            previousX = previousSquare[1] + 100
             #add the missing square to the list
             result.append((currentEntry[0],previousSquare[1],None))
+            continue
         result.append(currentEntry)
         previousSquare = currentEntry
+        previousX = currentEntry[1]
+        if len(currentLevel) == 0:
+            rest = (-1,-1,[None])*(8-len(result))
+            result.extend(rest)
+            break
+        else:
+            currentEntry = currentLevel.pop(0)
     return result
 
 
