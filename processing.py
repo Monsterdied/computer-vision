@@ -31,7 +31,7 @@ def image_processing2(img):
     return gaussian_blurred
 
 
-def detect_chessboard(imgpath,iteration):
+def detect_chessboard(imgpath,iteration,debug=False):
     probablistic = False
     if iteration > 3:
         iteration = iteration -2
@@ -46,36 +46,18 @@ def detect_chessboard(imgpath,iteration):
     img = image_processing(imgpath)
 
     #Canny edge detection
-    edges = cv2.Canny(img, 50, 150, apertureSize=3)
+    canny = cv2.Canny(img, 50, 150, apertureSize=3)
     if not probablistic:
-        edges = cv2.dilate(edges, None, iterations=8 + iteration)
+        edges = cv2.dilate(canny, None, iterations=8 + iteration)
         edges = cv2.erode(edges, None, iterations=12 + iteration//4)
-    else:
-        edges = cv2.dilate(edges, None, iterations=3 + iteration//2)
-        edges = cv2.erode(edges, None, iterations=3 + iteration)
-        edges = cv2.dilate(edges, None, iterations=3 + iteration//2)
-    adaptive = cv2.adaptiveThreshold(edges, 255,
-                                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                 cv2.THRESH_BINARY_INV, 11, 2)
+
     #try hought lines
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100 + 10 *iteration, minLineLength=170, maxLineGap=10)
-    if probablistic == True: 
-        linesImg = np.zeros(edges.shape, dtype=np.uint8)
-        if lines is not None:
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                cv2.line(linesImg, (x1, y1), (x2, y2), 255, 2)  # Green line (BGR)
-        linesImg = cv2.dilate(linesImg, None, iterations=1+iteration)
-        #linesImg = cv2.erode(linesImg, None, iterations=3)
-        #cv2.imshow("Hough Lines", edges)
-        edges = linesImg
-    #cv2.imshow("Canny Edges", edges)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+    if probablistic:
+        edges = probabilistic_hough_lines(canny, iteration,canny)
 
     # Find contours in the image
-    #contours , _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours ,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
     # Sort contours by area and filter out small ones
     largest_area = 0
     chessboard_contour = None
@@ -95,11 +77,6 @@ def detect_chessboard(imgpath,iteration):
         return None,None
     
     corners = chessboard_contour.reshape(4, 2)
-    cloned = edges.copy()
-    cloned = cv2.cvtColor(cloned, cv2.COLOR_GRAY2BGR)
-    for i in liste:
-        cv2.polylines(cloned, [i], True, (0, 255, 0), 2)
-    cv2.imshow("Contours", cloned)
     
     # Draw corners on the image
     for corner in corners:
@@ -109,15 +86,30 @@ def detect_chessboard(imgpath,iteration):
     cv2.polylines(resized_img, [chessboard_contour], True, (255, 0, 0), 2)
 
     # Display the original image, edges, and detected corners
-    #cv2.imshow("Processed Image", img)
-    #cv2.imshow("Edges", edges)
-    cv2.imshow("Detected Corners", resized_img)
+    if debug == True:
+        cv2.imshow("Processed Image", img)
+        cv2.imshow("Edges", edges)
+        cv2.imshow("Detected Corners", resized_img)
 
     #cv2.waitKey(0)
     #cv2.destroyAllWindows()
     
     return corners,largest_area
 
+def probabilistic_hough_lines(edges, iteration,canny):
+    edges = cv2.dilate(canny, None, iterations=3 + iteration//2)
+    edges = cv2.erode(edges, None, iterations=3 + iteration)
+    edges = cv2.dilate(edges, None, iterations=3 + iteration//2)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100 + 10 *iteration, minLineLength=170, maxLineGap=10)
+    linesImg = np.zeros(edges.shape, dtype=np.uint8)
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(linesImg, (x1, y1), (x2, y2), 255, 2)  # Green line (BGR)
+    linesImg = cv2.dilate(linesImg, None, iterations=1+iteration)
+    #linesImg = cv2.erode(linesImg, None, iterations=3)
+    #cv2.imshow("Hough Lines", edges)
+    return linesImg
 
 def wrap_chessboard(imgpath, corners):
     if corners is None:
@@ -451,10 +443,10 @@ def check_square(square,img):
     # Calculate percentage
     percentage = (black_pixels / total_pixels) * 100.0
     #print(f"Percentage of black pixels: {percentage:.2f}%")
-    #cv2.imshow("Masked Image", resized)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
-    if percentage > 20:
+    cv2.imshow("Masked Image", resized)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    if percentage > 5:
         #print("Black square detected")
         return 0
     else:
@@ -468,6 +460,7 @@ def check_pieces(square_matrix,cannyEdges):
     cannyEdges = cv2.dilate(cannyEdges, None, iterations=15)
     cannyEdges = cv2.erode(cannyEdges, None, iterations=10)
     result = []
+    total = 0
     for row in square_matrix:
         new_row = []
         for square in row:
@@ -476,8 +469,11 @@ def check_pieces(square_matrix,cannyEdges):
                 #if it didnt detect a square probably there is a piece there
                 new_row.append(1)
                 continue
-            new_row.append(check_square(square,cannyEdges))
+            PiecePresence = check_square(square,cannyEdges)
+            total += PiecePresence
+            new_row.append(PiecePresence)
         result.append(new_row)
+    return result,total
 
 
 # draw the bounding boxes of the pieces
@@ -543,32 +539,32 @@ cannyEdges = None
 wrap = None
 for img in os.listdir(dataDir):
     #img = "G028_IMG015.jpg"
-    #img = "G056_IMG017.jpg"
-    #img = "G083_IMG089.jpg"
-    #img = "G087_IMG093.jpg"
-    #img = "G041_IMG098.jpg"
-    #img = "G000_IMG102.jpg"
+
     total+=1
     imgpath = os.path.join(dataDir, img)
-    #tries 
+    #try to find the board
     for i in range(13):
-        corners,curr_area = detect_chessboard(imgpath,i)
+        corners,curr_area = detect_chessboard(imgpath,i,debug=False)
         if corners is not None:
             print(f"Chessboard found in {img}")
         else:
             continue
+        # warp the image
         if corners is not None:
             wrap = wrap_chessboard(imgpath, corners)
-
+        # see if the square warped is a board
         if wrap is not None:
-            square_box,cannyEdges,normalizedBoard = detect_chessboard_squares(wrap,True)
+            square_box,cannyEdges,normalizedBoard = detect_chessboard_squares(wrap,False)
         if square_box is None:
             #cv2.imshow("No squares found", wrap)
             #cv2.waitKey(0)
             #cv2.destroyAllWindows()
             continue
         else:
-            print("Squares found1",len(square_box))
+            if len(square_box) != 8:
+                print("Not all columns detected")
+                continue
+            #print("Squares found1",len(square_box))
             count+=1
             break
     if square_box is None:
@@ -577,8 +573,12 @@ for img in os.listdir(dataDir):
 
     if square_box is None:
         print("No wrapping performed")
+    #check presence of pieces in the squares
     if square_box is not None:
-        matrix = check_pieces(square_box,cannyEdges)
+        matrix,total_pieces = check_pieces(square_box,cannyEdges)
+        print("Pieces detected",total_pieces)
+        for row in matrix:
+            print(row)
 
     if cannyEdges is not None:
         # Get bounding boxes of pieces
