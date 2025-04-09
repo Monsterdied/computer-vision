@@ -31,8 +31,11 @@ def image_processing2(img):
     return gaussian_blurred
 
 
-def detect_chessboard(imgpath):
-
+def detect_chessboard(imgpath,iteration):
+    probablistic = False
+    if iteration > 3:
+        iteration = iteration -2
+        probablistic = True
     #Image for visualization
     visualize = cv2.imread(imgpath)
     
@@ -44,31 +47,60 @@ def detect_chessboard(imgpath):
 
     #Canny edge detection
     edges = cv2.Canny(img, 50, 150, apertureSize=3)
-
-    edges = cv2.dilate(edges, None, iterations=3)
-    edges = cv2.erode(edges, None, iterations=3)
+    if not probablistic:
+        edges = cv2.dilate(edges, None, iterations=8 + iteration)
+        edges = cv2.erode(edges, None, iterations=12 + iteration//4)
+    else:
+        edges = cv2.dilate(edges, None, iterations=3 + iteration//2)
+        edges = cv2.erode(edges, None, iterations=3 + iteration)
+        edges = cv2.dilate(edges, None, iterations=3 + iteration//2)
+    adaptive = cv2.adaptiveThreshold(edges, 255,
+                                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                 cv2.THRESH_BINARY_INV, 11, 2)
+    #try hought lines
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100 + 10 *iteration, minLineLength=170, maxLineGap=10)
+    if probablistic == True: 
+        linesImg = np.zeros(edges.shape, dtype=np.uint8)
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                cv2.line(linesImg, (x1, y1), (x2, y2), 255, 2)  # Green line (BGR)
+        linesImg = cv2.dilate(linesImg, None, iterations=1+iteration)
+        #linesImg = cv2.erode(linesImg, None, iterations=3)
+        #cv2.imshow("Hough Lines", edges)
+        edges = linesImg
+    #cv2.imshow("Canny Edges", edges)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
 
     # Find contours in the image
-    contours , _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+    #contours , _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours ,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # Sort contours by area and filter out small ones
     largest_area = 0
     chessboard_contour = None
+    liste = []
     for contour in contours:
         peri = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
         if len(approx) == 4:
             area = cv2.contourArea(approx)
+            liste.append(approx)
             if area > largest_area:
                 largest_area = area
                 chessboard_contour = approx
     
     if chessboard_contour is None:
         print("No chessboard found")
-        return None
+        return None,None
     
     corners = chessboard_contour.reshape(4, 2)
-
+    cloned = edges.copy()
+    cloned = cv2.cvtColor(cloned, cv2.COLOR_GRAY2BGR)
+    for i in liste:
+        cv2.polylines(cloned, [i], True, (0, 255, 0), 2)
+    cv2.imshow("Contours", cloned)
+    
     # Draw corners on the image
     for corner in corners:
         cv2.circle(resized_img, tuple(corner), 5, (0, 255, 0), -1)
@@ -77,14 +109,14 @@ def detect_chessboard(imgpath):
     cv2.polylines(resized_img, [chessboard_contour], True, (255, 0, 0), 2)
 
     # Display the original image, edges, and detected corners
-    """cv2.imshow("Processed Image", img)
-    cv2.imshow("Edges", edges)
+    #cv2.imshow("Processed Image", img)
+    #cv2.imshow("Edges", edges)
     cv2.imshow("Detected Corners", resized_img)
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    """
-    return corners
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    
+    return corners,largest_area
 
 
 def wrap_chessboard(imgpath, corners):
@@ -175,7 +207,7 @@ def draw_lines(lines, line_image,debug=False):
         cv2.waitKey(0)
     return line_image
 
-def detect_chessboard_squares(img):
+def detect_chessboard_squares(img,debug=False):
     #cv2.imshow("Original Image1", img)
     processed_img = image_processing2(img)
     x,y = processed_img.shape
@@ -224,7 +256,8 @@ def detect_chessboard_squares(img):
             print("All squares found")
         #else:
         best_img_lines = cv2.cvtColor(best_img_lines, cv2.COLOR_GRAY2BGR)
-        drawSquares(best_squares, best_img_lines)
+        if debug == True:
+            drawSquares(best_squares, best_img_lines)
     
 
 
@@ -310,7 +343,7 @@ def drawSquares(square_matrix, img):
 
 
 #Order squares based on their coordinates and converts them to a matrix
-def orderSquares(squares):
+def orderSquares(squares,debug=False):
     # Sort squares based on their coordinates
         # Calculate the center of each square for sorting
     squares_with_centers = []
@@ -322,7 +355,8 @@ def orderSquares(squares):
         center_y = sum(y_coords) / 4
         squares_with_centers.append((center_y, center_x, square))
     if len(squares_with_centers) == 0:
-        print("No squares found")
+        if debug == True:
+            print("No squares found")
         return []
     sorted_squares_by_y = sorted(squares_with_centers, key=lambda x: (x[0]))
     current_y = None
@@ -353,8 +387,6 @@ def orderSquares(squares):
 def HandleColumn(currentLevel):
     currentLevel.sort(key=lambda x: x[1])
     if len(currentLevel) < 8:
-        print(currentLevel)
-        #print("Not enough squares in a row:",len(currentLevel))
         currentLevel = dealWithMissingSquares(currentLevel)
     if len(currentLevel) > 8:
         print("Too many squares in a row:",len(currentLevel))
@@ -363,13 +395,14 @@ def HandleColumn(currentLevel):
 
 # Deal when a column has missing squares find the NONE squares and add them
 def dealWithMissingSquares(currentLevel):
-    # TODO probably expand to use the two nearest squares to speculate the middle square
+    # TODO probably expand to use the two nearest squares to speculate the middle square  it is probably wrong
+    # function defective for now
     previousSquare = None
     result = []
     if len(currentLevel) == 0:
         return [None]*8
     if len(currentLevel) < 2:
-        rest = (-1,-1,[None])*(8-len(currentLevel))
+        rest = [(-1,-1,None)]*(8-len(currentLevel))
         currentLevel.extend(rest)
         return currentLevel
     previousSquare = currentLevel.pop(0)
@@ -386,7 +419,7 @@ def dealWithMissingSquares(currentLevel):
         previousSquare = currentEntry
         previousX = currentEntry[1]
         if len(currentLevel) == 0:
-            rest = (-1,-1,[None])*(8-len(result))
+            rest = [(-1,-1,None)]*(8-len(result))
             result.extend(rest)
             break
         else:
@@ -505,22 +538,42 @@ def get_pieces_bounding_boxes(normalizedBoard,debug=False):
 dataDir = "images/" 
 count=0
 total=0
+square_box = None
+cannyEdges = None
+wrap = None
 for img in os.listdir(dataDir):
-    #img = "G087_IMG099.jpg"
+    #img = "G028_IMG015.jpg"
+    #img = "G056_IMG017.jpg"
+    #img = "G083_IMG089.jpg"
+    #img = "G087_IMG093.jpg"
+    #img = "G041_IMG098.jpg"
+    #img = "G000_IMG102.jpg"
     total+=1
     imgpath = os.path.join(dataDir, img)
-    corners = detect_chessboard(imgpath)
-    if corners is not None:
-        count+=1
-        print(f"Chessboard found in {img}")
-    else:
-        print(f"No chessboard found in {img}")
+    #tries 
+    for i in range(13):
+        corners,curr_area = detect_chessboard(imgpath,i)
+        if corners is not None:
+            print(f"Chessboard found in {img}")
+        else:
+            continue
+        if corners is not None:
+            wrap = wrap_chessboard(imgpath, corners)
 
-    if corners is not None:
-        wrap = wrap_chessboard(imgpath, corners)
-    
-    if wrap is not None:
-        square_box,cannyEdges,normalizedBoard = detect_chessboard_squares(wrap)
+        if wrap is not None:
+            square_box,cannyEdges,normalizedBoard = detect_chessboard_squares(wrap,True)
+        if square_box is None:
+            #cv2.imshow("No squares found", wrap)
+            #cv2.waitKey(0)
+            #cv2.destroyAllWindows()
+            continue
+        else:
+            print("Squares found1",len(square_box))
+            count+=1
+            break
+    if square_box is None:
+        print("No squares found",imgpath)
+            
 
     if square_box is None:
         print("No wrapping performed")
