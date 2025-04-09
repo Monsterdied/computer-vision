@@ -314,12 +314,16 @@ def drawSquares(square_matrix, img,piece_presence=None):
             text = f"R{row_idx},C{column_idx}"
             if piece_presence is not None:
                 if piece_presence[row_idx][column_idx] == 0:
-                    text = "-P" + text #Not a piece
+                    text = "-P"  #Not a piece
                 else:
-                    text = "+P" + text #Piece present
+                    text = "+P" #Piece present
+                font_scale = 1
+                thickness=2
+            else:
+                text = f"R{row_idx},C{column_idx}"
+                font_scale = 0.5
+                thickness = 1
             font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.5
-            thickness = 1
             text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
             
             # Adjust text position to center it properly
