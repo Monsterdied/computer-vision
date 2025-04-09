@@ -5,7 +5,7 @@ from scipy import ndimage
 import math
 from matplotlib import pyplot as plt
 import random
-
+import copy
 
 def image_processing(imgpath):
 
@@ -285,7 +285,7 @@ def squares(img,original_img,debug=False):
 
 
 #draws the squares on the image
-def drawSquares(square_matrix, img):
+def drawSquares(square_matrix, img,piece_presence=None):
     row_idx = -1
     for row in square_matrix:
         counter = 0
@@ -312,6 +312,11 @@ def drawSquares(square_matrix, img):
             
             # Display row and column numbers (e.g., "R0,C1")
             text = f"R{row_idx},C{column_idx}"
+            if piece_presence is not None:
+                if piece_presence[row_idx][column_idx] == 0:
+                    text = "-P" + text #Not a piece
+                else:
+                    text = "+P" + text #Piece present
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.5
             thickness = 1
@@ -324,7 +329,7 @@ def drawSquares(square_matrix, img):
             # Draw the text (white color)
             cv2.putText(
                 img, text, (text_x, text_y), 
-                font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA
+                font, font_scale, (0, 255, 0), thickness, cv2.LINE_AA
             )
             #print(square[0][0][0] -square[2][0][0])
             #print(square[1][0][0] -square[3][0][0])
@@ -447,7 +452,7 @@ def check_square(square,img,debug):
         cv2.imshow("Masked Image", resized)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-    if percentage > 20:
+    if percentage > 25:
         #print("Black square detected")
         return 0
     else:
@@ -585,9 +590,11 @@ for img in os.listdir(dataDir):
         print("No wrapping performed")
     #check presence of pieces in the squares
     if square_box is not None:
-        matrix,total_pieces = check_pieces(square_box,normalizedBoard)
+        presence_matrix,total_pieces = check_pieces(copy.deepcopy(square_box),normalizedBoard)
+        newImage = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
+        drawSquares(square_box,newImage,piece_presence=presence_matrix)
         print("Pieces detected",total_pieces)
-        for row in matrix:
+        for row in presence_matrix:
             print(row)
 
     if normalizedBoard is not None:
@@ -604,9 +611,9 @@ for img in os.listdir(dataDir):
         print("No canny edges found")
     #break
     # TODO CHECK IF ALL THE COLUMNS ARE DETECTED ADD FILL 
-    if len(matrix) != 8:
-        rest = [[0]*8]*(8-len(matrix))
-        matrix.extend(rest)
+    if len(presence_matrix) != 8:
+        rest = [[0]*8]*(8-len(presence_matrix))
+        presence_matrix.extend(rest)
     
 
 print(f"Chessboard found in {count} out of {total} images")
