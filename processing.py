@@ -5,7 +5,7 @@ from scipy import ndimage
 import math
 from matplotlib import pyplot as plt
 import random
-import copy
+
 
 def image_processing(imgpath):
 
@@ -31,11 +31,8 @@ def image_processing2(img):
     return gaussian_blurred
 
 
-def detect_chessboard(imgpath,iteration,debug=False):
-    probablistic = False
-    if iteration > 3:
-        iteration = iteration -2
-        probablistic = True
+def detect_chessboard(imgpath):
+
     #Image for visualization
     visualize = cv2.imread(imgpath)
     
@@ -46,38 +43,32 @@ def detect_chessboard(imgpath,iteration,debug=False):
     img = image_processing(imgpath)
 
     #Canny edge detection
-    canny = cv2.Canny(img, 50, 150, apertureSize=3)
-    if not probablistic:
-        edges = cv2.dilate(canny, None, iterations=8 + iteration)
-        edges = cv2.erode(edges, None, iterations=12 + iteration//4)
+    edges = cv2.Canny(img, 50, 150, apertureSize=3)
 
-    #try hought lines
-    if probablistic:
-        edges = probabilistic_hough_lines(canny, iteration,canny)
+    edges = cv2.dilate(edges, None, iterations=3)
+    edges = cv2.erode(edges, None, iterations=3)
 
     # Find contours in the image
-    contours ,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
+    contours , _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
     # Sort contours by area and filter out small ones
     largest_area = 0
     chessboard_contour = None
-    liste = []
     for contour in contours:
         peri = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
         if len(approx) == 4:
             area = cv2.contourArea(approx)
-            liste.append(approx)
             if area > largest_area:
                 largest_area = area
                 chessboard_contour = approx
     
     if chessboard_contour is None:
         print("No chessboard found")
-        return None,None
+        return None
     
     corners = chessboard_contour.reshape(4, 2)
-    
+
     # Draw corners on the image
     for corner in corners:
         cv2.circle(resized_img, tuple(corner), 5, (0, 255, 0), -1)
@@ -86,30 +77,15 @@ def detect_chessboard(imgpath,iteration,debug=False):
     cv2.polylines(resized_img, [chessboard_contour], True, (255, 0, 0), 2)
 
     # Display the original image, edges, and detected corners
-    if debug == True:
-        cv2.imshow("Processed Image", img)
-        cv2.imshow("Edges", edges)
-        cv2.imshow("Detected Corners", resized_img)
+    """cv2.imshow("Processed Image", img)
+    cv2.imshow("Edges", edges)
+    cv2.imshow("Detected Corners", resized_img)
 
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
-    
-    return corners,largest_area
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    """
+    return corners
 
-def probabilistic_hough_lines(edges, iteration,canny):
-    edges = cv2.dilate(canny, None, iterations=3 + iteration//2)
-    edges = cv2.erode(edges, None, iterations=3 + iteration)
-    edges = cv2.dilate(edges, None, iterations=3 + iteration//2)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100 + 10 *iteration, minLineLength=170, maxLineGap=10)
-    linesImg = np.zeros(edges.shape, dtype=np.uint8)
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(linesImg, (x1, y1), (x2, y2), 255, 2)  # Green line (BGR)
-    linesImg = cv2.dilate(linesImg, None, iterations=1+iteration)
-    #linesImg = cv2.erode(linesImg, None, iterations=3)
-    #cv2.imshow("Hough Lines", edges)
-    return linesImg
 
 def wrap_chessboard(imgpath, corners):
     if corners is None:
@@ -164,7 +140,7 @@ def wrap_chessboard(imgpath, corners):
     
     return warped
 
-def draw_lines(lines, line_image,debug=False):
+def draw_lines(lines, line_image):
     if lines is not None:
         for line in lines:
             # dont draw diagonal lines
@@ -188,18 +164,17 @@ def draw_lines(lines, line_image,debug=False):
             b = np.sin(theta)
             x0 = a * rho
             y0 = b * rho
-            x1 = int(x0 + 1200 * (-b))
-            y1 = int(y0 + 1200 * (a))
-            x2 = int(x0 - 1200 * (-b))
-            y2 = int(y0 - 1200 * (a))
+            x1 = int(x0 + 1000 * (-b))
+            y1 = int(y0 + 1000 * (a))
+            x2 = int(x0 - 1000 * (-b))
+            y2 = int(y0 - 1000 * (a))
             cv2.line(line_image, (x1, y1), (x2, y2), 255, 2)
     #img2 = cv2.resize(img2, (0,0), fx=0.25, fy=0.25)
-    if debug == True:
-        cv2.imshow("Hough Lines", line_image)
-        cv2.waitKey(0)
+    cv2.imshow("Hough Lines", line_image)
+    cv2.waitKey(0)
     return line_image
 
-def detect_chessboard_squares(img,debug=False):
+def detect_chessboard_squares(img):
     #cv2.imshow("Original Image1", img)
     processed_img = image_processing2(img)
     x,y = processed_img.shape
@@ -210,68 +185,47 @@ def detect_chessboard_squares(img,debug=False):
     canny_edges = cv2.Canny(processed_img, 50, 150, apertureSize=3)
     canny_edges = cv2.dilate(canny_edges, None, iterations=3)
     canny_edges = cv2.erode(canny_edges, None, iterations=1)
-
-    adaptive_thresh = cv2.adaptiveThreshold(processed_img, 255,
-                                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                 cv2.THRESH_BINARY_INV, 11, 2)
-    canny_edges = cv2.bitwise_or(canny_edges, adaptive_thresh)
-
     #cv2.imshow("Canny", canny_edges)
     #cv2.imshow("Processed Image", processed_img)
     #cv2.waitKey(0)
     #rezize for visualization remove after debug
-    num_votes = 850
+    num_votes = 600
     best_squares_number = 0
     best_squares = None
-    best_img_lines = None
     #try 3 times to find the best number of votes
-    for i in range(7):
+    for i in range(3):
         lines = cv2.HoughLines(canny_edges, 1, np.pi / 180, num_votes,0,0)
         #lines = cv2.HoughLinesP(canny_edges, 1, np.pi / 180, threshold=num_votes, minLineLength=10, maxLineGap=1000)
         new_img_lines = np.zeros(canny_edges.shape, dtype=np.uint8)
         image_with_lines = draw_lines(lines, new_img_lines)
-        image_with_lines = cv2.dilate(image_with_lines, None, iterations=3)
-        squares_raw,matrix = squares(image_with_lines,processed_img,debug=False)
+        squares_raw,matrix = squares(image_with_lines,processed_img)
         squares_number = len(squares_raw)
+        print(f"Squares found: {squares_number}")
         if squares_number > best_squares_number:
             best_squares_number = squares_number
             best_squares = matrix
-            best_img_lines = image_with_lines
         if squares_number == 64:
             break
         else:
             num_votes -= 50
             #print(num_votes)
             #print("Not enough squares found")
-    if best_squares is not None:
-        if best_squares_number == 64:
-            print("All squares found")
-        #else:
-        best_img_lines = cv2.cvtColor(best_img_lines, cv2.COLOR_GRAY2BGR)
-        if debug == True:
-            drawSquares(best_squares, best_img_lines)
     
 
 
-    return best_squares,processed_img
+    return best_squares,canny_edges
 
 
 #gets the squares from the image
-def squares(img,original_img,debug=False):
+def squares(img,original_img):
         # Find contours in the image
     contours , _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Sort contours by area and filter out small ones
     squares = []
     for contour in contours:
-        #width height ratio
-        x,y,w,h = cv2.boundingRect(contour)
-
-        aspect_ratio = float(w)/h
-        #if aspect_ratio < 0.5 or aspect_ratio > 1.5:
-        #    continue
         area = cv2.contourArea(contour)
-        if 4000 < area and area< 11000:
+        if 5500 < area < 11000:
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
             if len(approx) == 4:
@@ -279,72 +233,30 @@ def squares(img,original_img,debug=False):
     #convert to color image for visualization
     original_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2BGR)
     square_matrix = orderSquares(squares)
-    if debug == True:
-        drawSquares(square_matrix, original_img)
+    drawSquares(square_matrix, original_img)
     return squares,square_matrix
 
 
 #draws the squares on the image
-def drawSquares(square_matrix, img,piece_presence=None):
-    row_idx = -1
+def drawSquares(square_matrix, img):
     for row in square_matrix:
-        counter = 0
-        row_idx += 1
-        column_idx = -1
+        #counter = 0
         for square in row:
-            column_idx += 1
             if square is None:
-                #print("Square is None")
                 continue
-            counter += 1
-            #if counter < 8:
-            #    continue
-            #print(square)
             cv2.drawContours(img, [square], 0, (0, 0, 255), 2)
-            moments = cv2.moments(square[2])
-            if moments["m00"] != 0:
-                cx = int(moments["m10"] / moments["m00"])
-                cy = int(moments["m01"] / moments["m00"])
-            else:
-                # Fallback: Use mean of all points if moments fail
-                cx = int(np.mean(square[:, 0, 0]))
-                cy = int(np.mean(square[:, 0, 1]))
-            
-            # Display row and column numbers (e.g., "R0,C1")
-            text = f"R{row_idx},C{column_idx}"
-            if piece_presence is not None:
-                if piece_presence[row_idx][column_idx] == 0:
-                    text = "-P"  #Not a piece
-                else:
-                    text = "+P" #Piece present
-                font_scale = 1
-                thickness=2
-            else:
-                text = f"R{row_idx},C{column_idx}"
-                font_scale = 0.5
-                thickness = 1
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
-            
-            # Adjust text position to center it properly
-            text_x = cx - text_size[0] // 2
-            text_y = cy + text_size[1] // 2
-            
-            # Draw the text (white color)
-            cv2.putText(
-                img, text, (text_x, text_y), 
-                font, font_scale, (0, 255, 0), thickness, cv2.LINE_AA
-            )
             #print(square[0][0][0] -square[2][0][0])
             #print(square[1][0][0] -square[3][0][0])
-    img = cv2.resize(img, (0,0), fx=0.7, fy=0.7)
+            #counter += 1
+            #if counter > 1:
+            #    break
     cv2.imshow("Squares drawn", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
 #Order squares based on their coordinates and converts them to a matrix
-def orderSquares(squares,debug=False):
+def orderSquares(squares):
     # Sort squares based on their coordinates
         # Calculate the center of each square for sorting
     squares_with_centers = []
@@ -356,14 +268,13 @@ def orderSquares(squares,debug=False):
         center_y = sum(y_coords) / 4
         squares_with_centers.append((center_y, center_x, square))
     if len(squares_with_centers) == 0:
-        if debug == True:
-            print("No squares found")
+        print("No squares found")
         return []
     sorted_squares_by_y = sorted(squares_with_centers, key=lambda x: (x[0]))
     current_y = None
     # TODO FINETUNE THIS TO GET LEVELS
-    margin_y = 20
-    margin_x = 600
+    margin_y = 40
+    smallest_x = sorted(squares_with_centers,key=lambda x: (x[1]))[0][1]
     #IMPORTANT
     #each square has 100 by 100 pixels
     matrix = []
@@ -371,68 +282,30 @@ def orderSquares(squares,debug=False):
     for y,x,square in sorted_squares_by_y:
         if current_y is None:
             current_y = y
-            current_x = x
-        elif abs(current_y - y) > margin_y or (len(currentLevel) >=8 and abs(current_x - x) > margin_x):
-            currentLevel = HandleColumn(currentLevel)
+            currentLevel = [None] * 8
+        elif abs(current_y - y) > margin_y:
+            current_y = y
             matrix.append(currentLevel)
-            currentLevel = []
-
-        currentLevel.append((y,x,square))
-        current_x = x
-        current_y = y
-    currentLevel = HandleColumn(currentLevel)
-    matrix.append(currentLevel)
-    return matrix
-
-# check if column is valid
-def HandleColumn(currentLevel):
-    currentLevel.sort(key=lambda x: x[1])
-    if len(currentLevel) < 8:
-        currentLevel = dealWithMissingSquares(currentLevel)
-    if len(currentLevel) > 8:
-        print("Too many squares in a row:",len(currentLevel))
-    currentLevel =map(lambda x: x[2],currentLevel)
-    return currentLevel
-
-# Deal when a column has missing squares find the NONE squares and add them
-def dealWithMissingSquares(currentLevel):
-    # TODO probably expand to use the two nearest squares to speculate the middle square  it is probably wrong
-    # function defective for now
-    previousSquare = None
-    result = []
-    if len(currentLevel) == 0:
-        return [None]*8
-    if len(currentLevel) < 2:
-        rest = [(-1,-1,None)]*(8-len(currentLevel))
-        currentLevel.extend(rest)
-        return currentLevel
-    previousSquare = currentLevel.pop(0)
-    result.append(previousSquare)
-    currentEntry = currentLevel.pop(0)
-    previousX = currentEntry[1]
-    while len(result) <8:
-        if abs(currentEntry[1] - previousX) > 120:
-            previousX = previousSquare[1] + 100
-            #add the missing square to the list
-            result.append((currentEntry[0],previousSquare[1],None))
+            currentLevel = [None] * 8
+        x_level = round((x-smallest_x) // 100)
+        if x_level > 7:
+            print("X level out of bounds")
             continue
-        result.append(currentEntry)
-        previousSquare = currentEntry
-        previousX = currentEntry[1]
-        if len(currentLevel) == 0:
-            rest = [(-1,-1,None)]*(8-len(result))
-            result.extend(rest)
-            break
-        else:
-            currentEntry = currentLevel.pop(0)
-    return result
+
+        currentLevel[x_level] = square
+    
+    matrix.append(currentLevel)
+    # Old Approach
+    #sort by x and y with the margin applied to the y axis
+    #sorted_squares_by_y_x = sorted(matrix, key=lambda x: (x[0],x[1]))
+    #print(sorted_squares_by_y_x)
+    #sorted_squares = map(lambda x: x[2],sorted_squares_by_y_x)
 
 
-
-
-#check if the square is black or white
-def check_square(square,img,debug):
-    #cv2.imshow("Canny Edges", img)
+        
+    return matrix
+def check_square(square,img):
+    cv2.imshow("Canny Edges", img)
     x, y, w, h = cv2.boundingRect(square)
     roi = img[y:y+h, x:x+w]
 
@@ -451,174 +324,57 @@ def check_square(square,img,debug):
     
     # Calculate percentage
     percentage = (black_pixels / total_pixels) * 100.0
-    #print(f"Percentage of black pixels: {percentage:.2f}%")
-    if debug == True:
-        cv2.imshow("Masked Image", resized)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    if percentage > 25:
-        #print("Black square detected")
+    print(f"Percentage of black pixels: {percentage:.2f}%")
+    cv2.imshow("Masked Image", resized)
+    cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    if percentage > 20:
+        print("Black square detected")
         return 0
     else:
-        #print("White square detected")
+        print("White square detected")
         return 1
-    
 
-
-#check the pressence of pieces in the squares
-def check_pieces(square_matrix,img,debug=False):
-    canny_edges = cv2.Canny(img, 50, 150, apertureSize=3)
-    canny_edges = cv2.dilate(canny_edges, None, iterations=3)
-    canny_edges = cv2.erode(canny_edges, None, iterations=1)
-    canny_edges = cv2.dilate(canny_edges, None, iterations=8)
-    canny_edges = cv2.erode(canny_edges, None, iterations=4)
-    if debug == True:
-        cv2.imshow("Canny Edges", canny_edges)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+def check_pieces(square_matrix,cannyEdges):
+    cannyEdges = cv2.dilate(cannyEdges, None, iterations=15)
+    cannyEdges = cv2.erode(cannyEdges, None, iterations=10)
     result = []
-    total = 0
-    if debug == True:
-        cv2.imshow("Canny Edges", canny_edges)
     for row in square_matrix:
         new_row = []
         for square in row:
             if square is None:
                 #I dont know just try our luck
-                #if it didnt detect a square probably there is a piece there
-                new_row.append(1)
+                new_row.append(random.randint(0,1))
                 continue
-            PiecePresence = check_square(square,canny_edges,debug)
-            total += PiecePresence
-            new_row.append(PiecePresence)
+            new_row.append(check_square(square,cannyEdges))
         result.append(new_row)
-    return result,total
-
-
-# draw the bounding boxes of the pieces
-def draw_bounding_boxes(img, bounding_boxes):
-    for (x, y, w, h) in bounding_boxes:
-        cv2.rectangle(img, (x, y), (x + w, y + h), (255,0,0), 2)
-    return img
-
-
-#get the bounding boxes of the pieces
-def get_pieces_bounding_boxes(normalizedBoard,debug=False):
-    #canny
-    # Apply adaptive thresholding before Canny
-    blurred = cv2.GaussianBlur(normalizedBoard, (5,5), 0)
-    thresh = cv2.adaptiveThreshold(blurred, 255, 
-                                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                 cv2.THRESH_BINARY_INV, 11, 2)
-    # Improved Canny edge detection
-    sigma = 1
-    v = np.median(blurred)
-    lower = int(max(0, (1.0 - sigma) * v))
-    upper = int(min(255, (1.0 + sigma) * v))
-    edges = cv2.Canny(blurred, lower, upper)
-
-
-    # Combine edges with threshold
-    combined = cv2.bitwise_or(edges, thresh)
-    #combined = cv2.addWeighted(edges, 0.5, thresh, 0.5, 0)
-    #combined = thresh
-    # Better morphological processing
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
-    processed = cv2.erode(combined, kernel, iterations=3)
-    processed = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel, iterations=5)
-    #processed = cv2.dilate(processed, None, iterations=5)
-
-    contours, _ = cv2.findContours(processed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    bounding_boxes = []
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        area = w*h
-        aspect_ratio = float(w)/h
-        # Filter based on reasonable chess piece characteristics
-        #if (area < 300 or area > 10000 or aspect_ratio < 0.3 or aspect_ratio > 3.0):  # Aspect ratio constraints
-            #print("bad")
-            #continue
-
-        #print(f"Area: {area}")
-        bounding_boxes.append((x, y, w, h))
-    normalizedBoard1 = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
-    img_with_boxes = draw_bounding_boxes(normalizedBoard1, bounding_boxes)
-    if debug:
-        cv2.imshow("Bounding Boxes", img_with_boxes)
-        cv2.waitKey(0)
-    # Draw bounding boxes on the original image
-    return bounding_boxes
 
 
 dataDir = "images/" 
 count=0
 total=0
-square_box = None
-cannyEdges = None
-wrap = None
 for img in os.listdir(dataDir):
-    #img = "G028_IMG015.jpg"
-
+    #img = "G083_IMG089.jpg"
     total+=1
     imgpath = os.path.join(dataDir, img)
-    #try to find the board
-    for i in range(13):
-        corners,curr_area = detect_chessboard(imgpath,i,debug=False)
-        if corners is not None:
-            print(f"Chessboard found in {img}")
-        else:
-            continue
-        # warp the image
-        if corners is not None:
-            wrap = wrap_chessboard(imgpath, corners)
-        # see if the square warped is a board
-        if wrap is not None:
-            square_box,normalizedBoard = detect_chessboard_squares(wrap,False)
-        if square_box is None:
-            #cv2.imshow("No squares found", wrap)
-            #cv2.waitKey(0)
-            #cv2.destroyAllWindows()
-            continue
-        else:
-            if len(square_box) != 8:
-                print("Not all columns detected")
-                continue
-            #print("Squares found1",len(square_box))
-            count+=1
-            break
-    if square_box is None:
-        print("No squares found",imgpath)
-            
+    corners = detect_chessboard(imgpath)
+    if corners is not None:
+        count+=1
+        print(f"Chessboard found in {img}")
+    else:
+        print(f"No chessboard found in {img}")
+
+    if corners is not None:
+        wrap = wrap_chessboard(imgpath, corners)
+    
+    if wrap is not None:
+        square_box,cannyEdges = detect_chessboard_squares(wrap)
 
     if square_box is None:
         print("No wrapping performed")
-    #check presence of pieces in the squares
     if square_box is not None:
-        presence_matrix,total_pieces = check_pieces(copy.deepcopy(square_box),normalizedBoard)
-        newImage = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
-        drawSquares(square_box,newImage,piece_presence=presence_matrix)
-        print("Pieces detected",total_pieces)
-        for row in presence_matrix:
-            print(row)
-
-    if normalizedBoard is not None:
-        # Get bounding boxes of pieces
-        bounding_boxes = get_pieces_bounding_boxes(normalizedBoard)
-        # Draw bounding boxes on the original image
-        #convert to color image for visualization
-        normalizedBoard1 = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
-        img_with_boxes = draw_bounding_boxes(normalizedBoard1, bounding_boxes)
-        #cv2.imshow("Bounding Boxes", img_with_boxes)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
-    else:
-        print("No canny edges found")
+        matrix = check_pieces(square_box,cannyEdges)
     #break
-    # TODO CHECK IF ALL THE COLUMNS ARE DETECTED ADD FILL 
-    if len(presence_matrix) != 8:
-        rest = [[0]*8]*(8-len(presence_matrix))
-        presence_matrix.extend(rest)
-    
 
 print(f"Chessboard found in {count} out of {total} images")
 
