@@ -1,5 +1,6 @@
 from chessboard import detect_chessboard, wrap_chessboard
-from chessboardPieces import check_pieces,  detect_chessboard_squares, drawSquares, get_pieces_bounding_boxes, draw_bounding_boxes
+from chessboardPieces import check_pieces,  detect_chessboard_squares, drawSquares
+from pieces import get_pieces_bounding_boxes, draw_bounding_boxes
 import cv2
 import os
 import copy
@@ -9,6 +10,7 @@ total=0
 square_box = None
 cannyEdges = None
 wrap = None
+presence_matrix= None
 for img in os.listdir(dataDir):
     #img = "G028_IMG015.jpg"
 
@@ -67,6 +69,8 @@ for img in os.listdir(dataDir):
     else:
         print("No canny edges found")
     #break
+    if presence_matrix is not None:
+        presence_matrix = [[0]*8]*8
     # TODO CHECK IF ALL THE COLUMNS ARE DETECTED ADD FILL 
     if len(presence_matrix) != 8:
         rest = [[0]*8]*(8-len(presence_matrix))
