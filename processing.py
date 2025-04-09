@@ -253,7 +253,7 @@ def detect_chessboard_squares(img,debug=False):
     
 
 
-    return best_squares,canny_edges,processed_img
+    return best_squares,processed_img
 
 
 #gets the squares from the image
@@ -422,7 +422,7 @@ def dealWithMissingSquares(currentLevel):
 
 
 #check if the square is black or white
-def check_square(square,img):
+def check_square(square,img,debug):
     #cv2.imshow("Canny Edges", img)
     x, y, w, h = cv2.boundingRect(square)
     roi = img[y:y+h, x:x+w]
@@ -443,10 +443,11 @@ def check_square(square,img):
     # Calculate percentage
     percentage = (black_pixels / total_pixels) * 100.0
     #print(f"Percentage of black pixels: {percentage:.2f}%")
-    cv2.imshow("Masked Image", resized)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    if percentage > 5:
+    if debug == True:
+        cv2.imshow("Masked Image", resized)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    if percentage > 20:
         #print("Black square detected")
         return 0
     else:
@@ -456,11 +457,20 @@ def check_square(square,img):
 
 
 #check the pressence of pieces in the squares
-def check_pieces(square_matrix,cannyEdges):
-    cannyEdges = cv2.dilate(cannyEdges, None, iterations=15)
-    cannyEdges = cv2.erode(cannyEdges, None, iterations=10)
+def check_pieces(square_matrix,img,debug=False):
+    canny_edges = cv2.Canny(img, 50, 150, apertureSize=3)
+    canny_edges = cv2.dilate(canny_edges, None, iterations=3)
+    canny_edges = cv2.erode(canny_edges, None, iterations=1)
+    canny_edges = cv2.dilate(canny_edges, None, iterations=8)
+    canny_edges = cv2.erode(canny_edges, None, iterations=4)
+    if debug == True:
+        cv2.imshow("Canny Edges", canny_edges)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     result = []
     total = 0
+    if debug == True:
+        cv2.imshow("Canny Edges", canny_edges)
     for row in square_matrix:
         new_row = []
         for square in row:
@@ -469,7 +479,7 @@ def check_pieces(square_matrix,cannyEdges):
                 #if it didnt detect a square probably there is a piece there
                 new_row.append(1)
                 continue
-            PiecePresence = check_square(square,cannyEdges)
+            PiecePresence = check_square(square,canny_edges,debug)
             total += PiecePresence
             new_row.append(PiecePresence)
         result.append(new_row)
@@ -554,7 +564,7 @@ for img in os.listdir(dataDir):
             wrap = wrap_chessboard(imgpath, corners)
         # see if the square warped is a board
         if wrap is not None:
-            square_box,cannyEdges,normalizedBoard = detect_chessboard_squares(wrap,False)
+            square_box,normalizedBoard = detect_chessboard_squares(wrap,False)
         if square_box is None:
             #cv2.imshow("No squares found", wrap)
             #cv2.waitKey(0)
@@ -575,12 +585,12 @@ for img in os.listdir(dataDir):
         print("No wrapping performed")
     #check presence of pieces in the squares
     if square_box is not None:
-        matrix,total_pieces = check_pieces(square_box,cannyEdges)
+        matrix,total_pieces = check_pieces(square_box,normalizedBoard)
         print("Pieces detected",total_pieces)
         for row in matrix:
             print(row)
 
-    if cannyEdges is not None:
+    if normalizedBoard is not None:
         # Get bounding boxes of pieces
         bounding_boxes = get_pieces_bounding_boxes(normalizedBoard)
         # Draw bounding boxes on the original image
@@ -593,6 +603,11 @@ for img in os.listdir(dataDir):
     else:
         print("No canny edges found")
     #break
+    # TODO CHECK IF ALL THE COLUMNS ARE DETECTED ADD FILL 
+    if len(matrix) != 8:
+        rest = [[0]*8]*(8-len(matrix))
+        matrix.extend(rest)
+    
 
 print(f"Chessboard found in {count} out of {total} images")
 
