@@ -53,11 +53,11 @@ for img in os.listdir(dataDir):
         print("Pieces detected",total_pieces)
         for row in presence_matrix:
             print(row)
-        drawSquares(square_box,newImage,piece_presence=presence_matrix)
+        #drawSquares(square_box,newImage,piece_presence=presence_matrix)
 
     if normalizedBoard is not None:
         # Get bounding boxes of pieces
-        bounding_boxes = get_pieces_bounding_boxes(normalizedBoard,False)
+        bounding_boxes = get_pieces_bounding_boxes(normalizedBoard,True)
         # Draw bounding boxes on the original image
         #convert to color image for visualization
         #normalizedBoard1 = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)

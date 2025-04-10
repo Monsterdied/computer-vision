@@ -24,14 +24,47 @@ def get_pieces_bounding_boxes(normalizedBoard,debug=False):
 
 
     # Combine edges with threshold
-    combined = cv2.bitwise_or(edges, thresh)
+    #combined = cv2.bitwise_or(edges, thresh)
+    #combined = thresh
+    best_bounding_boxes = None
+    best_processed = None
+    best_n_bounding_boxes = -1
+    for i in range(10):
+        processed,bounding_boxes =optimizeBoundingBoxes(i,thresh,edges)
+        if len(bounding_boxes) > best_n_bounding_boxes:
+            best_n_bounding_boxes = len(bounding_boxes)
+            best_bounding_boxes = bounding_boxes
+            best_processed = processed
+        print(f"Iteration {i}: Found {len(bounding_boxes)} bounding boxes")
+
+
+    normalizedBoard1 = cv2.cvtColor(best_processed, cv2.COLOR_GRAY2BGR)
+    img_with_boxes = draw_bounding_boxes(normalizedBoard1, best_bounding_boxes)
+    normalizedBoard2 = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
+    ground_truth = draw_bounding_boxes(normalizedBoard2,best_bounding_boxes)
+    if debug:
+        cv2.imshow("Bounding Boxes", img_with_boxes)
+        cv2.imshow("Ground Truth", ground_truth)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    # Draw bounding boxes on the original image
+    return bounding_boxes
+
+def optimizeBoundingBoxes(iteration,thresh,edges):
+    #kernel =
+    edges = cv2.dilate(edges, None, iterations=3 + iteration//2)
+    img2_inv = cv2.bitwise_not(edges)
+        # AND operation with inverted image
+    combined = cv2.bitwise_and(thresh, img2_inv)
     #combined = cv2.addWeighted(edges, 0.5, thresh, 0.5, 0)
     #combined = thresh
     # Better morphological processing
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
-    processed = cv2.erode(combined, kernel, iterations=3)
-    processed = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel, iterations=5)
-    #processed = cv2.dilate(processed, None, iterations=5)
+    processed = cv2.erode(combined, kernel, iterations=2+ iteration//2)
+    processed = cv2.dilate(processed, None, iterations=12+iteration)
+    #processed = cv2.erode(processed, kernel, iterations=15)
+    #processed = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel, iterations=5)
+    #
 
     contours, _ = cv2.findContours(processed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bounding_boxes = []
@@ -40,16 +73,10 @@ def get_pieces_bounding_boxes(normalizedBoard,debug=False):
         area = w*h
         aspect_ratio = float(w)/h
         # Filter based on reasonable chess piece characteristics
-        #if (area < 300 or area > 10000 or aspect_ratio < 0.3 or aspect_ratio > 3.0):  # Aspect ratio constraints
+        if (area < 4000 or area > 70000 or aspect_ratio < 0.3 or aspect_ratio > 3.0):  # Aspect ratio constraints
             #print("bad")
-            #continue
+            continue
 
         #print(f"Area: {area}")
         bounding_boxes.append((x, y, w, h))
-    normalizedBoard1 = cv2.cvtColor(processed, cv2.COLOR_GRAY2BGR)
-    img_with_boxes = draw_bounding_boxes(normalizedBoard1, bounding_boxes)
-    if debug:
-        cv2.imshow("Bounding Boxes", img_with_boxes)
-        cv2.waitKey(0)
-    # Draw bounding boxes on the original image
-    return bounding_boxes
+    return processed,bounding_boxes
