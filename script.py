@@ -8,17 +8,16 @@ dataDir = "images/"
 count=0
 total=0
 square_box = None
-cannyEdges = None
 wrap = None
 presence_matrix= None
 for img in os.listdir(dataDir):
-    #img = "G028_IMG015.jpg"
+    #img = "G019_IMG082.jpg"
 
     total+=1
     imgpath = os.path.join(dataDir, img)
     #try to find the board
     for i in range(13):
-        corners,curr_area = detect_chessboard(imgpath,i,debug=True)
+        corners,curr_area = detect_chessboard(imgpath,i,debug=False)
         if corners is not None:
             print(f"Chessboard found in {img}")
         else:
@@ -51,10 +50,10 @@ for img in os.listdir(dataDir):
     if square_box is not None:
         presence_matrix,total_pieces = check_pieces(copy.deepcopy(square_box),normalizedBoard)
         newImage = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
-        #drawSquares(square_box,newImage,piece_presence=presence_matrix)
         print("Pieces detected",total_pieces)
         for row in presence_matrix:
             print(row)
+        drawSquares(square_box,newImage,piece_presence=presence_matrix)
 
     if normalizedBoard is not None:
         # Get bounding boxes of pieces
@@ -69,7 +68,7 @@ for img in os.listdir(dataDir):
     else:
         print("No canny edges found")
     #break
-    if presence_matrix is not None:
+    if presence_matrix is None:
         presence_matrix = [[0]*8]*8
     # TODO CHECK IF ALL THE COLUMNS ARE DETECTED ADD FILL 
     if len(presence_matrix) != 8:

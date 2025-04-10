@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import random
-
+import copy
 
 def image_processing2(img):
 
@@ -344,3 +344,11 @@ def check_pieces(square_matrix,img,debug=False):
         result.append(new_row)
     return result,total
 
+def getNumberOfSquaresNotNull(square_matrix):
+    number_of_squares_detected = 0
+    cloned = copy.deepcopy(square_matrix)
+    for row in cloned:
+        for square in row:
+            if square is not None:
+                number_of_squares_detected += 1
+    return number_of_squares_detected
