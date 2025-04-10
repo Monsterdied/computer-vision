@@ -72,6 +72,8 @@ def detect_chessboard(imgpath,iteration,debug=False):
         cv2.imshow("Processed Image", img)
         cv2.imshow("Edges", edges)
         cv2.imshow("Detected Corners", resized_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     #cv2.waitKey(0)
     #cv2.destroyAllWindows()

@@ -18,7 +18,7 @@ for img in os.listdir(dataDir):
     imgpath = os.path.join(dataDir, img)
     #try to find the board
     for i in range(13):
-        corners,curr_area = detect_chessboard(imgpath,i,debug=False)
+        corners,curr_area = detect_chessboard(imgpath,i,debug=True)
         if corners is not None:
             print(f"Chessboard found in {img}")
         else:
@@ -58,7 +58,7 @@ for img in os.listdir(dataDir):
 
     if normalizedBoard is not None:
         # Get bounding boxes of pieces
-        bounding_boxes = get_pieces_bounding_boxes(normalizedBoard,True)
+        bounding_boxes = get_pieces_bounding_boxes(normalizedBoard,False)
         # Draw bounding boxes on the original image
         #convert to color image for visualization
         #normalizedBoard1 = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
