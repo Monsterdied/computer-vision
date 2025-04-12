@@ -1,4 +1,4 @@
-from chessboard import detect_chessboard, wrap_chessboard
+from chessboard import detect_chessboard, wrap_chessboard,wrapInsideSquare
 from chessboardPieces import check_pieces,  detect_chessboard_squares, drawSquares
 from pieces import get_pieces_bounding_boxes, draw_bounding_boxes
 import cv2
@@ -26,6 +26,8 @@ for img in os.listdir(dataDir):
         if corners is not None:
             wrap = wrap_chessboard(imgpath, corners)
         # see if the square warped is a board
+        #if wrap is not None:
+        #    insideSquare = wrapInsideSquare(wrap,False)
         if wrap is not None:
             square_box,normalizedBoard = detect_chessboard_squares(wrap,False)
         if square_box is None:
@@ -48,7 +50,7 @@ for img in os.listdir(dataDir):
         print("No wrapping performed")
     #check presence of pieces in the squares
     if square_box is not None:
-        presence_matrix,total_pieces = check_pieces(copy.deepcopy(square_box),normalizedBoard)
+        presence_matrix,total_pieces = check_pieces(copy.deepcopy(square_box),normalizedBoard,False)
         newImage = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
         print("Pieces detected",total_pieces)
         for row in presence_matrix:

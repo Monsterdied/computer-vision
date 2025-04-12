@@ -187,7 +187,7 @@ def drawSquares(square_matrix, img,piece_presence=None):
             )
             #print(square[0][0][0] -square[2][0][0])
             #print(square[1][0][0] -square[3][0][0])
-    img = cv2.resize(img, (0,0), fx=0.7, fy=0.7)
+    img = cv2.resize(img, (0,0), fx=0.5, fy=0.5)
     cv2.imshow("Squares drawn", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

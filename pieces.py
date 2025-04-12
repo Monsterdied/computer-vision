@@ -29,7 +29,7 @@ def get_pieces_bounding_boxes(normalizedBoard,debug=False):
     best_bounding_boxes = None
     best_processed = None
     best_n_bounding_boxes = -1
-    for i in range(10):
+    for i in range(2):
         processed,bounding_boxes =optimizeBoundingBoxes(i,thresh,edges)
         if len(bounding_boxes) > best_n_bounding_boxes:
             best_n_bounding_boxes = len(bounding_boxes)
@@ -61,7 +61,7 @@ def optimizeBoundingBoxes(iteration,thresh,edges):
     # Better morphological processing
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
     processed = cv2.erode(combined, kernel, iterations=2+ iteration//2)
-    processed = cv2.dilate(processed, None, iterations=12+iteration)
+    processed = cv2.dilate(processed, None, iterations=13+iteration)
     #processed = cv2.erode(processed, kernel, iterations=15)
     #processed = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel, iterations=5)
     #
