@@ -52,10 +52,6 @@ def draw_lines(lines, line_image,debug=False):
 def detect_chessboard_squares(img,debug=False):
     #cv2.imshow("Original Image1", img)
     processed_img = image_processing2(img)
-    x,y = processed_img.shape
-    fx = (1000/x)
-    fy = (1000/y)
-    processed_img = cv2.resize(processed_img, (0,0), fx=fy, fy=fx)
     #cv2.imshow("Processed Image1", processed_img)
     canny_edges = cv2.Canny(processed_img, 50, 150, apertureSize=3)
     canny_edges = cv2.dilate(canny_edges, None, iterations=3)
@@ -103,7 +99,7 @@ def detect_chessboard_squares(img,debug=False):
     
 
 
-    return best_squares,processed_img
+    return best_squares
 
 
 #gets the squares from the image

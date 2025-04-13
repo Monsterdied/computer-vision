@@ -138,15 +138,16 @@ def wrap_chessboard(imgpath, corners):
     
     # Warp the image
     warped = cv2.warpPerspective(img, M, (int(width), int(height)))
-
-    warped_resized = cv2.resize(warped, (0,0), fx=0.25, fy=0.25)
     
     # Display the result
     """cv2.imshow("Warped Chessboard", warped_resized)
     cv2.waitKey(0)
     cv2.destroyAllWindows()"""
-    
-    return warped
+    x,y,_ = warped.shape
+    fx = (1000/x)
+    fy = (1000/y)
+    warped = cv2.resize(warped, (0,0), fx=fy, fy=fx)
+    return warped,M,fx,fy
 
 #Doest work that good
 def wrapInsideSquare(wraped,debug=False):

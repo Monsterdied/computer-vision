@@ -1,6 +1,6 @@
 from chessboard import detect_chessboard, wrap_chessboard,wrapInsideSquare
 from chessboardPieces import check_pieces,  detect_chessboard_squares, drawSquares
-from pieces import get_pieces_bounding_boxes, draw_bounding_boxes
+from pieces import get_pieces_bounding_boxes, draw_bounding_boxes,transform_contours_to_original,draw_bounding_boxes
 import cv2
 import os
 import copy
@@ -24,12 +24,12 @@ for img in os.listdir(dataDir):
             continue
         # warp the image
         if corners is not None:
-            wrap = wrap_chessboard(imgpath, corners)
+            normalizedBoard,M,fx,fy = wrap_chessboard(imgpath, corners)
         # see if the square warped is a board
         #if wrap is not None:
         #    insideSquare = wrapInsideSquare(wrap,False)
-        if wrap is not None:
-            square_box,normalizedBoard = detect_chessboard_squares(wrap,False)
+        if normalizedBoard is not None:
+            square_box = detect_chessboard_squares(normalizedBoard,False)
         if square_box is None:
             #cv2.imshow("No squares found", wrap)
             #cv2.waitKey(0)
@@ -51,15 +51,26 @@ for img in os.listdir(dataDir):
     #check presence of pieces in the squares
     if square_box is not None:
         presence_matrix,total_pieces = check_pieces(copy.deepcopy(square_box),normalizedBoard,False)
-        newImage = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
         print("Pieces detected",total_pieces)
         for row in presence_matrix:
             print(row)
-        #drawSquares(square_box,newImage,piece_presence=presence_matrix)
+        drawSquares(copy.deepcopy(square_box),normalizedBoard,piece_presence=presence_matrix)
 
-    if normalizedBoard is not None:
+    if normalizedBoard is not None and square_box is not None and presence_matrix is not None:
         # Get bounding boxes of pieces
-        bounding_boxes = get_pieces_bounding_boxes(normalizedBoard,True)
+        if square_box is None:
+            square_box = []
+        bounding_boxes = get_pieces_bounding_boxes(normalizedBoard,square_box,presence_matrix,False)
+        #unwrap the bounding boxes to the original image
+        img = cv2.imread(imgpath)
+        unwrapped_bounding_boxes = transform_contours_to_original(bounding_boxes,M,img.shape,fx,fy)
+        #img = cv2.resize(img, (0,0), fx=0.3, fy=0.3)
+        img = draw_bounding_boxes(img, unwrapped_bounding_boxes)
+        img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
+        cv2.imshow("Bounding Boxes", img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        #drawSquares(unwrapped_bounding_boxes,img)
         # Draw bounding boxes on the original image
         #convert to color image for visualization
         #normalizedBoard1 = cv2.cvtColor(normalizedBoard, cv2.COLOR_GRAY2BGR)
@@ -68,7 +79,7 @@ for img in os.listdir(dataDir):
         #cv2.waitKey(0)
         #cv2.destroyAllWindows()
     else:
-        print("No canny edges found")
+        bounding_boxes = []
     #break
     if presence_matrix is None:
         presence_matrix = [[0]*8]*8
