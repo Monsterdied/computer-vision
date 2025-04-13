@@ -4,13 +4,25 @@ from pieces import get_pieces_bounding_boxes, draw_bounding_boxes,transform_cont
 import cv2
 import os
 import copy
+import json
 dataDir = "images/" 
+dataDir = os.listdir(dataDir)
+result=[]
+# check if file input.json exists
+if os.path.exists("input.json"):
+    with open("input.json", "r") as f:
+        json1 = json.load(f)
+        dataDir = ""
+        images = json1["image_files"]
+else:
+    dataDir = "images/" 
+    images = os.listdir(dataDir)
 count=0
 total=0
 square_box = None
 wrap = None
 presence_matrix= None
-for img in os.listdir(dataDir):
+for img in images:
     #img = "G019_IMG082.jpg"
 
     total+=1
@@ -54,7 +66,7 @@ for img in os.listdir(dataDir):
         print("Pieces detected",total_pieces)
         for row in presence_matrix:
             print(row)
-        drawSquares(copy.deepcopy(square_box),normalizedBoard,piece_presence=presence_matrix)
+        #drawSquares(copy.deepcopy(square_box),normalizedBoard,piece_presence=presence_matrix)
 
     if normalizedBoard is not None and square_box is not None and presence_matrix is not None:
         # Get bounding boxes of pieces
@@ -62,14 +74,14 @@ for img in os.listdir(dataDir):
             square_box = []
         bounding_boxes = get_pieces_bounding_boxes(normalizedBoard,square_box,presence_matrix,False)
         #unwrap the bounding boxes to the original image
-        img = cv2.imread(imgpath)
-        unwrapped_bounding_boxes = transform_contours_to_original(bounding_boxes,M,img.shape,fx,fy)
+        img1 = cv2.imread(imgpath)
+        unwrapped_bounding_boxes = transform_contours_to_original(bounding_boxes,M,img1.shape,fx,fy)
         #img = cv2.resize(img, (0,0), fx=0.3, fy=0.3)
-        img = draw_bounding_boxes(img, unwrapped_bounding_boxes)
-        img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
-        cv2.imshow("Bounding Boxes", img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        img1 = draw_bounding_boxes(img1, unwrapped_bounding_boxes)
+        img1 = cv2.resize(img1, (0,0), fx=0.2, fy=0.2)
+        #cv2.imshow("Bounding Boxes", img1)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
         #drawSquares(unwrapped_bounding_boxes,img)
         # Draw bounding boxes on the original image
         #convert to color image for visualization
@@ -87,6 +99,25 @@ for img in os.listdir(dataDir):
     if len(presence_matrix) != 8:
         rest = [[0]*8]*(8-len(presence_matrix))
         presence_matrix.extend(rest)
+    entry = {}
+    print(img)
+    entry["image"] = img
+    entry["board"] = presence_matrix
+    entry["num_pieces"] = total_pieces
+    # convert bounding boxes to a list of lists
+    converted_bounding_boxes = []
+    for box in bounding_boxes:
+        x, y, w, h = cv2.boundingRect(box)
+        entry1 = {}
+        entry1["xmin"] = x
+        entry1["ymin"] = y
+        entry1["xmax"] = x + w
+        entry1["ymax"] = y + h
+        converted_bounding_boxes.append(entry1)
+    entry["bounding_boxes"] = converted_bounding_boxes
+    result.append(entry)
     
-
+#save the results to a json file
+with open("output.json", "w") as f:
+    json.dump(result, f)
 print(f"Chessboard found in {count} out of {total} images")
