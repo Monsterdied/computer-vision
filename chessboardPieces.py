@@ -158,11 +158,14 @@ def drawSquares(square_matrix, img,piece_presence=None):
             
             # Display row and column numbers (e.g., "R0,C1")
             text = f"R{row_idx},C{column_idx}"
+            color = (0, 255, 0)
             if piece_presence is not None:
                 if piece_presence[row_idx][column_idx] == 0:
                     text = "-P"  #Not a piece
+                    color = (255, 0, 0)
                 else:
                     text = "+P" #Piece present
+                    color = (0, 0, 255)
                 font_scale = 1
                 thickness=2
             else:
@@ -179,7 +182,7 @@ def drawSquares(square_matrix, img,piece_presence=None):
             # Draw the text (white color)
             cv2.putText(
                 img, text, (text_x, text_y), 
-                font, font_scale, (0, 255, 0), thickness, cv2.LINE_AA
+                font, font_scale, color, thickness, cv2.LINE_AA
             )
             #print(square[0][0][0] -square[2][0][0])
             #print(square[1][0][0] -square[3][0][0])
@@ -302,7 +305,7 @@ def check_square(square,img,debug):
         cv2.imshow("Masked Image", resized)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-    if percentage > 25:
+    if percentage > 30:
         #print("Black square detected")
         return 0
     else:
