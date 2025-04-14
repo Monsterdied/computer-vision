@@ -23,6 +23,8 @@ else:
         #join the path with the names of the images
         entry = [os.path.join(str(number), img) for img in entry]
         images += entry
+#images = os.listdir(dataDir)
+#images = [os.path.join(dataDir, img) for img in images]
 print("Images found:", len(images))
 print("Images:", images)
 count=0
@@ -39,7 +41,7 @@ for imgpath in images:
     #imgpath = os.path.join(dataDir, img)
     #try to find the board
     for i in range(30):
-        corners,curr_area = detect_chessboard(imgpath,i,debug=True)
+        corners,curr_area = detect_chessboard(imgpath,i,debug=False)
         if corners is not None:
             print(f"Chessboard found in {imgpath}")
         else:
@@ -77,7 +79,7 @@ for imgpath in images:
         print("Pieces detected",total_pieces)
         for row in presence_matrix:
             print(row)
-        drawSquares(copy.deepcopy(square_box),normalizedBoard,piece_presence=presence_matrix)
+        #drawSquares(copy.deepcopy(square_box),normalizedBoard,piece_presence=presence_matrix)
 
     if normalizedBoard is not None and square_box is not None and presence_matrix is not None:
         # Get bounding boxes of pieces
