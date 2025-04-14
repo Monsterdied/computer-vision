@@ -240,9 +240,19 @@ def HandleColumn(currentLevel):
         currentLevel = dealWithMissingSquares(currentLevel)
     if len(currentLevel) > 8:
         print("Too many squares in a row:",len(currentLevel))
+        currentLevel = dealWithTooManySquares(currentLevel) # test this
     currentLevel =map(lambda x: x[2],currentLevel)
     return currentLevel
-
+def dealWithTooManySquares(currentLevel):
+    while len(currentLevel) > 8:
+        smallestDistance = 1000000
+        to_remove = None
+        for i in range(len(currentLevel)-1):
+            if abs(currentLevel[i][1] - currentLevel[i+1][1]) < smallestDistance:
+                smallestDistance = abs(currentLevel[i][1] - currentLevel[i+1][1])
+                to_remove = i
+        currentLevel.pop(to_remove)
+    return currentLevel
 # Deal when a column has missing squares find the NONE squares and add them
 def dealWithMissingSquares(currentLevel):
     # TODO probably expand to use the two nearest squares to speculate the middle square  it is probably wrong

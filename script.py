@@ -1,11 +1,11 @@
-from chessboard import detect_chessboard, wrap_chessboard,wrapInsideSquare
+from chessboard import detect_chessboard, wrap_chessboard
 from chessboardPieces import check_pieces,  detect_chessboard_squares, drawSquares
 from pieces import get_pieces_bounding_boxes, draw_bounding_boxes,transform_contours_to_original,draw_bounding_boxes
 import cv2
 import os
 import copy
 import json
-dataDir = "images1\\" 
+dataDir = "images\\" 
 numbers = [0,6,19,22,28,33,38,41,42,47,56,58,61,72,76,78,83,87,91,99]
 result=[]
 # check if file input.json exists
@@ -31,16 +31,17 @@ square_box = None
 wrap = None
 presence_matrix= None
 failed = []
-for img in images:
-    #img = "G019_IMG082.jpg"
-
+#debug = ['0\\G000_IMG032.jpg', '0\\G000_IMG064.jpg', '6\\G006_IMG009.jpg', '6\\G006_IMG047.jpg', '19\\G019_IMG044.jpg', '22\\G022_IMG011.jpg', '22\\G022_IMG031.jpg', '22\\G022_IMG044.jpg', '28\\G028_IMG005.jpg', '28\\G028_IMG022.jpg', '28\\G028_IMG035.jpg', '28\\G028_IMG052.jpg', '28\\G028_IMG082.jpg', '28\\G028_IMG084.jpg', '33\\G033_IMG005.jpg', '33\\G033_IMG024.jpg', '33\\G033_IMG035.jpg', '33\\G033_IMG037.jpg', '33\\G033_IMG045.jpg', '33\\G033_IMG060.jpg', '38\\G038_IMG003.jpg', '38\\G038_IMG099.jpg', '41\\G041_IMG025.jpg', '41\\G041_IMG049.jpg', '42\\G042_IMG007.jpg', '56\\G056_IMG033.jpg', '56\\G056_IMG050.jpg', '56\\G056_IMG053.jpg', '56\\G056_IMG075.jpg', '56\\G056_IMG102.jpg', '58\\G058_IMG003.jpg', '58\\G058_IMG004.jpg', '58\\G058_IMG006.jpg', '58\\G058_IMG019.jpg', '58\\G058_IMG023.jpg', '61\\G061_IMG024.jpg', '78\\G078_IMG055.jpg', '83\\G083_IMG047.jpg', '87\\G087_IMG060.jpg', '91\\G091_IMG047.jpg', '91\\G091_IMG066.jpg', '91\\G091_IMG077.jpg']
+for imgpath in images:
+    #img = "41\\G041_IMG011.jpg"
+    total_pieces = None
     total+=1
-    imgpath = os.path.join(dataDir, img)
+    #imgpath = os.path.join(dataDir, img)
     #try to find the board
-    for i in range(13):
-        corners,curr_area = detect_chessboard(imgpath,i,debug=False)
+    for i in range(30):
+        corners,curr_area = detect_chessboard(imgpath,i,debug=True)
         if corners is not None:
-            print(f"Chessboard found in {img}")
+            print(f"Chessboard found in {imgpath}")
         else:
             continue
         # warp the image
@@ -76,7 +77,7 @@ for img in images:
         print("Pieces detected",total_pieces)
         for row in presence_matrix:
             print(row)
-        #drawSquares(copy.deepcopy(square_box),normalizedBoard,piece_presence=presence_matrix)
+        drawSquares(copy.deepcopy(square_box),normalizedBoard,piece_presence=presence_matrix)
 
     if normalizedBoard is not None and square_box is not None and presence_matrix is not None:
         # Get bounding boxes of pieces
@@ -110,9 +111,11 @@ for img in images:
         rest = [[0]*8]*(8-len(presence_matrix))
         presence_matrix.extend(rest)
     entry = {}
-    print(img)
-    entry["image"] = img
+    print(imgpath)
+    entry["image"] = imgpath
     entry["board"] = presence_matrix
+    if total_pieces is None:
+        total_pieces = 0
     entry["num_pieces"] = total_pieces
     # convert bounding boxes to a list of lists
     converted_bounding_boxes = []

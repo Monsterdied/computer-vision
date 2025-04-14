@@ -149,38 +149,3 @@ def wrap_chessboard(imgpath, corners):
     warped = cv2.resize(warped, (0,0), fx=fy, fy=fx)
     return warped,M,fx,fy
 
-#Doest work that good
-def wrapInsideSquare(wraped,debug=False):
-    x,y,_ = wraped.shape
-    fx = (1000/x)
-    fy = (1000/y)
-    wraped = cv2.resize(wraped, (0,0), fx=fy, fy=fx)
-    edges = cv2.Canny(wraped, 50, 150, apertureSize=3)
-    wraped1 = cv2.cvtColor(wraped, cv2.COLOR_BGR2GRAY)
-    edges = cv2.adaptiveThreshold(wraped1, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
-    edges = cv2.erode(edges, None, iterations=3)
-    edges = cv2.dilate(edges, None, iterations=6)
-    lines = cv2.HoughLines(edges, 1, np.pi / 180, 450,0,0)
-    lines_image = np.zeros(edges.shape, dtype=np.uint8)
-    lines_image = draw_lines(lines,lines_image)
-    edges = cv2.bitwise_not(lines_image)
-    contours , _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    #to rgb
-    edges = cv2.cvtColor(edges, cv2.COLOR_BGR2RGB)
-    for contour in contours:
-        peri = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
-        if len(approx) == 4:
-            area = cv2.contourArea(approx)
-            if area > 700000:
-                square = approx
-                edges = cv2.drawContours(edges, [square], -1, (0, 255, 0), 2)
-                wraped = cv2.drawContours(wraped, [square], -1, (0, 255, 0), 2)
-                break
-    if debug:
-        cv2.imshow("Lines", lines_image)
-        cv2.imshow("Edges", edges)
-        cv2.imshow("Wraped", wraped)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
