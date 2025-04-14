@@ -5,23 +5,32 @@ import cv2
 import os
 import copy
 import json
-dataDir = "images/" 
-dataDir = os.listdir(dataDir)
+dataDir = "images1\\" 
+numbers = [0,6,19,22,28,33,38,41,42,47,56,58,61,72,76,78,83,87,91,99]
 result=[]
 # check if file input.json exists
 if os.path.exists("input.json"):
     with open("input.json", "r") as f:
         json1 = json.load(f)
-        dataDir = ""
         images = json1["image_files"]
 else:
-    dataDir = "images/" 
-    images = os.listdir(dataDir)
+    images = []
+    for number in numbers:
+        dataDirTemp = "images1/"
+        #join the path with the names of the images
+        dataDirTemp = os.path.join(dataDirTemp, str(number))
+        entry = os.listdir(dataDirTemp)
+        #join the path with the names of the images
+        entry = [os.path.join(str(number), img) for img in entry]
+        images += entry
+print("Images found:", len(images))
+print("Images:", images)
 count=0
 total=0
 square_box = None
 wrap = None
 presence_matrix= None
+failed = []
 for img in images:
     #img = "G019_IMG082.jpg"
 
@@ -55,7 +64,8 @@ for img in images:
             count+=1
             break
     if square_box is None:
-        print("No squares found",imgpath)
+        print("No squares found:",imgpath)
+        failed.append(imgpath)
             
 
     if square_box is None:
@@ -116,7 +126,8 @@ for img in images:
         converted_bounding_boxes.append(entry1)
     entry["bounding_boxes"] = converted_bounding_boxes
     result.append(entry)
-    
+    print(f"\n\nChessboard found in {count} out of {total} images\n\n\n")
+print(failed)
 #save the results to a json file
 with open("output.json", "w") as f:
     json.dump(result, f)
