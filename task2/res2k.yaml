@@ -1,0 +1,20 @@
+path: D:\A_University\ano4\semester_2\Vision\computer-vision\task2\processed # absolute path to dataset
+test: 2k/test/images # relative path to test images
+train: 2k/train/images # relative path to training images
+val: 2k/val/images # relative path to validation images
+
+# classes
+names:
+  0: white-pawn
+  1: white-rook
+  2: white-knight
+  3: white-bishop
+  4: white-queen
+  5: white-king
+  6: black-pawn
+  7: black-rook
+  8: black-knight
+  9: black-bishop
+  10: black-king
+  11: black-king
+  12: empty
