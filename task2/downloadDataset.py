@@ -1,4 +1,4 @@
-from utils import download_file, extract_zip
+from task2.utils import download_file, extract_zip
 import os
 
 if not os.path.exists("dataset/"):
