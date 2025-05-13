@@ -1,8 +1,11 @@
 /images
 /images1
+/images2
 /test
 /__pycache__
 /2kImages
 /dataset
 chessboard.zip
 /processed
+*.pth
+annotations.json
