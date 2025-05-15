@@ -1,4 +1,4 @@
-path: D:\A_University\ano4\semester_2\Vision\computer-vision\task2\processed # absolute path to dataset
+path: ./processed # absolute path to dataset
 test: 2k/test/images # relative path to test images
 train: 2k/train/images # relative path to training images
 val: 2k/val/images # relative path to validation images
