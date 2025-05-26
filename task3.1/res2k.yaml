@@ -1,7 +1,7 @@
 path: ./ # absolute path to dataset
-test: 2k/test/images # relative path to test images
-train: 2k/train/images # relative path to training images
-val: 2k/val/images # relative path to validation images
+test: test/images # relative path to test images
+train: train/images # relative path to training images
+val: val/images # relative path to validation images
 
 # classes
 names:
