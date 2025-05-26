@@ -1,4 +1,4 @@
-path: ./processed # absolute path to dataset
+path: ./ # absolute path to dataset
 test: 2k/test/images # relative path to test images
 train: 2k/train/images # relative path to training images
 val: 2k/val/images # relative path to validation images

@@ -5,6 +5,7 @@
 /__pycache__
 /2kImages
 /dataset
+/datasets
 chessboard.zip
 /processed
 *.pth

@@ -1,9 +1,9 @@
 import json
 import os
 import shutil
-with open('../dataset/anotations/annotations.json', 'r') as f:
+with open('../annotations.json', 'r') as f:
     data = json.load(f)
-init_path = "processed"
+init_path = "datasets"
 if os.path.exists(init_path):
     #os.remove(init_path)
     print("Directory already exists. Please remove it manually.")
@@ -29,7 +29,7 @@ for split in data['splits']['chessred2k'].keys():
         imagefound = None
         for image in data['images']:
             if(image['id'] == image_id):
-                source = os.path.join("../dataset","images", image['path'])
+                source = os.path.join("../", image['path'])
                 destination = os.path.join(currImagePath, f"{image['id']}.jpg")
                 imagefound = image
                 shutil.copy(source, destination)
