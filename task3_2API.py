@@ -2,11 +2,12 @@ from chessboard import detect_chessboard, wrap_chessboard
 from chessboardPieces import check_pieces,  detect_chessboard_squares, drawSquares
 from pieces import get_pieces_bounding_boxes, draw_bounding_boxes,transform_contours_to_original,draw_bounding_boxes
 import copy
-def detectBoardAndSquares(imgpath):
+def detectBoardAndSquares(imgpath,debug=False):
     for i in range(30):
         corners,curr_area = detect_chessboard(imgpath,i,debug=False)
         if corners is not None:
-            print(f"Chessboard found in {imgpath}")
+            if debug:
+                print(f"Chessboard found in {imgpath}")
         else:
             continue
         # warp the image
@@ -24,7 +25,8 @@ def detectBoardAndSquares(imgpath):
             continue
         else:
             if len(square_box) != 8:
-                print("Not all columns detected")
+                if debug:
+                    print("Not all columns detected")
                 continue
             #print("Squares found1",len(square_box))
             break
