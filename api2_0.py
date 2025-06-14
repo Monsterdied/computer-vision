@@ -57,7 +57,7 @@ def resize_contours(contour, scale_factor=0.25):
 
 def detectBoard(imgpath,model):
     result = model.predict(imgpath, imgsz=640, conf=0.6,save=False,verbose=False)
-    result = result[0].keypoints.xy[0]
+    result = result[0].cpu().keypoints.xy[0]
     contour = np.array([
         result[0],
         result[1],
