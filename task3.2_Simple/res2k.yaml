@@ -1,7 +1,7 @@
 path: ./ # absolute path to dataset
-test: 2k/test/images # relative path to test images
-train: 2k/train/images # relative path to training images
-val: 2k/val/images # relative path to validation images
+test: datasets/2k/test/images # relative path to test images
+train: datasets/2k/train/images # relative path to training images
+val: datasets/2k/val/images # relative path to validation images
 
 # Keypoints
 kpt_shape: [4, 2] # number of keypoints, number of dims (2 for x,y or 3 for x,y,visible)

@@ -9,4 +9,6 @@
 chessboard.zip
 /processed
 *.pth
+*.pt
 annotations.json
+/runs
