@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from chessboardPieces import draw_lines
-
+import copy
 def image_processing(imgpath):
 
     img =  cv2.imread(imgpath)
@@ -106,7 +106,7 @@ def wrap_chessboard(imgpath, corners):
     # Since corners were detected on a resized image, we need to scale them back up
     scale_factor = 4 
     corners = corners * scale_factor
-    
+    firstPoint = copy.deepcopy(corners[3])
     # Order the corners: top-left, top-right, bottom-right, bottom-left
     # First, sort by y-coordinate to separate top and bottom rows
     corners = corners[corners[:, 1].argsort()]
@@ -147,5 +147,39 @@ def wrap_chessboard(imgpath, corners):
     fx = (1000/x)
     fy = (1000/y)
     warped = cv2.resize(warped, (0,0), fx=fy, fy=fx)
-    return warped,M,fx,fy
+    first_point_original = firstPoint
+    first_point_reshaped = np.array([[[first_point_original[0], first_point_original[1]]]], dtype=np.float32)
+    first_point_warped = cv2.perspectiveTransform(first_point_reshaped, M)[0][0]
+    #print("Test1",first_point_warped)
+    x = round(first_point_warped[0])
+    y = round(first_point_warped[1])
+    rotation = 90
+    if x < 10 and y > 10:
+        rotation = 180
+    if x > 10 and y < 10:
+        rotation = 0
+    if x > 10 and y > 10:
+        rotation = 270
+    
+
+    #print("Test2",first_point_resized)
+    # 6. Draw the first point on the warped image (red circle)
+    test = (0,0)
+    first_point_warped = [int(first_point_warped[0] * fy), int(first_point_warped[1] * fx)]
+    if first_point_warped[0] == 0:
+        first_point_warped[0] = 20
+    else:
+        first_point_warped[0] -= 20
+    if first_point_warped[1] == 0:
+        first_point_warped[1] = 20
+    else:
+        first_point_warped[1] -= 20
+    """print(fx,fy)
+    print(first_point_warped)
+    print("IMage shape",warped.shape)
+    cv2.circle(warped, (first_point_warped[0],first_point_warped[1]), 100, (0, 0, 255), -1)
+    cv2.imshow("Test",warped)
+    cv2.waitKey()
+    cv2.destroyAllWindows()"""
+    return warped,M,fx,fy,rotation
 
