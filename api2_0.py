@@ -1,10 +1,9 @@
 import copy
-from chessboard import detect_chessboard, wrap_chessboard
+from chessboard import wrap_chessboard
 import cv2
 import torch
 from ultralytics import YOLO
 import numpy as np
-from chessboardPieces import detect_chessboard_squares,drawSquares
 def detectBoardAndSquares(imgpath,model,debug=False):
     #corners,curr_area = detect_chessboard(imgpath,0,debug=False)
     #print(corners)
