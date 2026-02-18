@@ -13,6 +13,8 @@ This project implements a complete end-to-end Computer Vision pipeline to conver
 The pipeline successfully handles perspective distortion through a warping process and maps 2D detections to a digital grid.
 
 | Ground Truth | Warped Perspective | Predicted Digital Board |
+
+| <img src="./Docs/ground_truth.png" width="250"> | <img src="./Docs/warped.png" width="250"> | <img src="./Docs/predicted.png" width="250"> |
 |:---:|:---:|:---:|
 | *Original Board State* | *Geometric Rectification* | *AI Reconstruction (Digital Twin)* |
 
