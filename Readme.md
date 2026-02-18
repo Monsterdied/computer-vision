@@ -14,7 +14,6 @@ The pipeline successfully handles perspective distortion through a warping proce
 
 | Ground Truth | Warped Perspective | Predicted Digital Board |
 |:---:|:---:|:---:|
-| <img src="./Docs/ground_truth.png" width="250"> | <img src="./Docs/warped.png" width="250"> | <img src="./Docs/predicted.png" width="250"> |
 | *Original Board State* | *Geometric Rectification* | *AI Reconstruction (Digital Twin)* |
 
 *(Note: Ensure the image filenames above match the files in your ./Docs/ folder, e.g., Figure3.png, Figure4.png, etc.)*
